@@ -1,0 +1,171 @@
+;
+; Tutorial #10 - Horizontal blanking effects - (Vers 2 - 15/03/04)
+;	Written by J.Hudson, edited by M.Shamgar
+;
+; This tutorial teaches you about:
+;
+; i. The GBA Hblank interrupt
+; ii. Using the HBlankCB function to create special effects.
+
+
+
+;--------------------------------------------------------------------------------------------------------------
+; By now you have covered most of the basics needed to start making games in Catapult. 
+; This tutorial is the first to cover some advanced concepts that will let you create impressive
+; special effects on the GBA, such as water ripples and rainbows.
+;
+; For more technical information on this subject, see the Catapult User's Guide.
+
+
+
+;--------------------------------------------------------------------------------------------------------------
+; The GBA HBlank interrupt
+;
+; On the GBA hardware, the HBlank interrupt is a piece of user code that is called every
+; time a new horizontal row of pixels is drawn on the screen. "So what?" I hear you ask.
+; Well, the practical upshot of this ability is that you can change the GBA's display
+; attributes on the fly, creating shear, palette and ripple effects on a per-horizontal line basis.
+;
+; However, this ability is limited, because the screen draws so quickly that there is only
+; a small amount of processor time allowed for each HBlank. This means that you are only
+; allowed around 30 (fast!) Catapult commands to be executed every HBlank. 
+;
+; Be aware that Catapult does not correctly emulate the TIMING of a real GBA. Complicated HBlank
+; effects will appear to work perfectly within Catapult, but will fail miserably when attempted on a
+; real GBA! When a HBlank routine takes longer than it should, it can still be executing while
+; the next horizontal line is drawn on the GBA screen. This can result in all sorts of strange
+; visual artifacts (including flickering, shearing, tearing, etc..)!
+;
+;
+
+
+;--------------------------------------------------------------------------------------------------------------
+; Using the GBA HBlankCB Catapult function
+;
+; Catapult makes it easy to use the HBlank interrupt. All you need to do is create a
+; function called HBlankCB, and Catapult will call this function at least 160 times
+; each screen draw (i.e. for every horizontal line of pixels on the screen). 
+;
+; This function takes one 1 parameter, which will contain the y position of the current horizontal line.
+;
+; At the moment, the HBlankCB function below has all its code commented out. If you execute
+; the project you will see that it produces a pattern of green blobs in the rightmost
+; quarter of the screen. Not very interesting. :)
+;
+; Now let's enable some of the code in the HBlankCB function. 
+;
+
+; (Part A)
+;
+; 1. Uncomment the SINGLE line of code below marked with "*** (1)". 
+;
+; 2. Now run the project. 
+;
+; What's going on here?
+; This shearing effect is caused by the screen X offset of every row being set to its Y value.
+; The Y value is passed into HBlankCB as parameter V_EV0, and this is used to modify the
+; screen offset partway through drawing. 
+;
+
+;--------------------------------------------------------------------------------------------------------------
+; (Part B)
+;
+; Now let's do something REALLY cool! 
+;
+; 1. Comment out line "*** (1)" again.
+;
+; 2. Uncomment the code marked with "*** (2)". 
+;
+; Woohoo! The green blocks should be rippling. Nice effect for so little work..!
+;
+
+;--------------------------------------------------------------------------------------------------------------
+; (Part C)
+;
+; But that's not all....
+;
+; 1. Uncomment the block marked with *** (3) (you can leave block 2
+; active at the same time if you want). 
+;
+; That's right! 16-bit rainbow palette effects in 4 bit tiled mode! 
+;
+; Anything you paint with background colour 15 will now have this effect. This
+; would be really nice to use for very economical sky backgrounds.
+;
+
+;--------------------------------------------------------------------------------------------------------------
+; I can tell you are already thinking of ways to use the HBlankCB function to do rippling
+; water, heat waves and other crazy effects in your games. The main drawback of this
+; function is that if you overuse it, your game can start looking like a bad 80's demo!
+;
+; Use the users guide to find out if the commands you are using within the HBlank
+; function are fast or slow commands (avoid any fills, resource loads, etc..!).
+
+
+;--------------------------------------------------------------------------------------------------------------
+; ==================================
+; CATAPULT SCRIPT BEGINS
+
+; do something completely useless here, otherwise Catapult will not update the screen.
+; Catapult needs at least one piece of code in the inner loop.
+	PaletteCycle [sprite] 0 0
+Return
+
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; set up the screen with some random blobs
+; 
+
+Function Initialise 0
+	DisplaySetAttribute [BlankDisplay] false		; enable the display
+	DisplaySetAttribute [EnableBG0] true			; enabled background layer 0
+	
+
+	TileMapSetMapBank 0 31					; make tilemap 0 use memory
+											; at the end of the tile data
+	TileDataFillTiles [bg] 0 1 1 1					; make a tile 1 of solid green
+	TileDataFillTiles [bg] 0 2 1 15					; make a background tile 2 of solid colour 15
+	
+	TileMapFillRect 0 [All] 0 0 32 32 2				; fill entire layer 0 with tile 2
+
+	; --- paint some random green blobs onto layer 0
+	V_LV0 = 0
+	While V_LV0 < 100
+		; choose a random position for each blob in the right-hand quarter of the screen
+		V_LV1 ?= 8
+		V_LV2 ?= 32
+		
+		TileMapSetAttribute 0 V_LV1+24 V_LV2 [Tile] 1
+		V_LV0 += 1
+	End
+
+	PaletteSetColour [bg] 1 {0,20,0}				; make background colour 1, green
+	
+	; reset the X offset of the screen in case it has been messed up
+	TileMapSetOffsetX 0 0
+Return
+
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; The HBlank function is automatically called for every
+; horizontal line of the screen, each time Catapult refreshes
+; the screen.
+; 
+
+Function HBlankCB 1 ; screen y pos
+;	TileMapSetOffsetX 0 V_EV0	; *** (1) uncomment here for simple example
+
+; *** (2) Uncomment all the following code for the second example:
+;	V_LV0 = G_TICKS
+;	V_LV0 += V_EV0
+;	V_LV1 Bounce V_LV0 31	;ripple the x offset of each row
+;	V_LV1 += 80	; move offset to centre of screen
+;	TileMapSetOffsetX 0 V_LV1
+
+; *** (3) Uncomment all the following code for the third rainbow example:
+;	V_LV0 = V_EV0
+;	V_LV0 /= 5
+;	PaletteSetColour [bg] 15 V_LV0
+Return
+
+

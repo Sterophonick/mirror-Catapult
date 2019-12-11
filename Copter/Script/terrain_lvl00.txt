@@ -1,0 +1,291 @@
+; =======================================================
+; $Source: N:\\REPOS/Current/Data/Catapult/copter/Script/terrain_lvl00.txt,v $
+; $Date: 2003/03/14 03:39:26 $
+; $Revision: 1.1 $
+; =======================================================
+;
+;
+
+; map each type of block, to a index in the level_tiles array
+##TB_WALL					0
+##TB_CURVE_HALF			1
+##TB_CURVE_FULL			2
+##TB_CURVE_FULL_TO_HALF	3			; from full (bottom) to half (right)
+##TB_UNCURVE_HALF			4			; inverse curve
+##TB_UNCURVE_FULL_TO_HALF	5			; from full (bottom) to half (top)
+##TB_UNCURVE_HALF_TO_FULL	6			; from half (left) to full (right)
+##TB_CORNER_HALF_TO_FULL	7			; almost solid tile
+##TB_CORNER_FULL_TO_HALF	8			; almost solid tile
+##TB_CORNER_FULL_TO_FULL	9			; almost solid tile
+
+##TB_CORNER_1				10			; ??
+##TB_CORNER_2				11			; ??
+
+##TB_SLOPE_HALF_TO_TOP		12			; from half (left) to full (right)
+##TB_SLOPE_NONE_TO_HALF	13			; from none (left) to half (right)
+
+##TB_TOP					14			; flat top
+##TB_SOLID					15			; solid block
+
+
+; As well, each block contains info about the visual type of joint (horiz, or vertical)
+; used to select a joining block
+##TJ_VERT					0
+##TJ_HORZ					1
+##TJ_DIAG_DOWN				2		; at top of block
+##TJ_DIAG_UP				3		; at bottom of block
+##TJ_DIAG_HALF				4		; at middle of block
+##TJ_NONE					5		; no join?
+
+
+; Contains tilesets for levels (level 0)
+; 
+; Each set of tiles, is 4 indexes into the reduced tileset for a level
+; 0 index means no tile is drawn. Each block is 2x2 tiles (16x16 pixels)
+; 
+; t1 (top left), t2 (top right), t3 (bottom left). All tile blocks are bottom/right combinations
+
+TableDefine2d LEVEL_TILES 0 0 t1 t2 t3 t4 join_left join_right
+
+TableData 31 32 31 32		#TJ_VERT	#TJ_NONE		; Wall
+TableData 0 0 1 0			#TJ_VERT	#TJ_HORZ		; CurveHalf
+TableData 2 3 4 32			#TJ_VERT	#TJ_HORZ		; CurveFull
+TableData 0 0 5 6			#TJ_VERT	#TJ_HORZ		; Full to half
+TableData 7 0 8 9			#TJ_VERT	#TJ_HORZ		; Inverse
+TableData 10 11 12 13		#TJ_VERT	#TJ_DIAG_DOWN	; from full (bottom) to half (top)
+TableData 14 15 16 17		#TJ_VERT	#TJ_DIAG_DOWN	; from half (left) to full (right)
+TableData 18 32 19 32		#TJ_VERT	#TJ_DIAG_DOWN	; almost solid tile, half to full
+TableData 20 21 32 32		#TJ_VERT	#TJ_DIAG_DOWN	; almost solid tile, full to half
+TableData 22 32 32 32		#TJ_VERT	#TJ_DIAG_DOWN	; almost solid tile, full to full
+
+TableData 23 32 32 32		#TJ_VERT	#TJ_DIAG_DOWN	; corner 1
+TableData 24 32 32 32		#TJ_VERT	#TJ_DIAG_DOWN	; corner 2
+
+TableData 27 28 24 32		#TJ_DIAG_HALF	#TJ_DIAG_UP	; slope 1 (half to full)
+TableData 0 0 27 28		#TJ_DIAG_DOWN	#TJ_DIAG_HALF	; slope 2 (none to half)
+
+TableData 30 30 32 32		#TJ_HORZ	#TJ_HORZ		; flat top
+TableData 32 32 32 32		#TJ_NONE	#TJ_NONE		; solid
+
+; Contains data for level 0
+;
+; Each line represents a single 16pixel block of terrain.
+; Data includes terrain type, height, and what sprite (item?) is top of the terrain, if any
+; Also includes checkpoints - which is a spot that the terrain can restart from
+; when the player dies (must be a flat spot, no higher than 4)
+ 
+TableDefine LEVEL00 0 Height Gfx Flags Checkpoint Item ObjMove
+
+; level 1-1 : Freeware demo level
+TableData	1		#TB_SLOPE_NONE_TO_HALF 	0	0	#LOBJ_NONE				0
+TableData	1		#TB_SLOPE_HALF_TO_TOP 		0	0	#LOBJ_NONE				0
+TableData	1		#TB_TOP 					0	0	#LOBJ_NONE				0
+TableData	1		#TB_TOP						0	0	#LOBJ_NONE				0
+TableData	1		#TB_TOP 					0	0	#LOBJ_NONE				0
+TableData	1		#TB_TOP						0	0	#LOBJ_NONE				0
+TableData	1		#TB_TOP 					0	0	#LOBJ_NONE				0
+TableData	1		#TB_TOP						0	0	#LOBJ_OILTANK			0
+TableData	1		#TB_TOP 					0	0	#LOBJ_NONE				0
+TableData	1		#TB_TOP						0	0	#LOBJ_NONE				0
+TableData	1		#TB_TOP 					0	0	#LOBJ_NONE				0
+TableData	1		#TB_TOP						0	0	#LOBJ_MISSILE_HARD		0
+TableData	1		#TB_TOP 					0	0	#LOBJ_NONE				0
+TableData	1		#TB_TOP						0	0	#LOBJ_SILO				0
+TableData	1		#TB_TOP 					0	0	#LOBJ_NONE				0
+TableData	1		#TB_TOP						0	0	#LOBJ_OILTANK			0
+TableData	1		#TB_TOP 					0	0	#LOBJ_NONE				0
+TableData	1		#TB_TOP						0	0	#LOBJ_NONE				0
+
+TableData	2		#TB_SLOPE_NONE_TO_HALF 	0	0	#LOBJ_NONE				0
+TableData	2		#TB_SLOPE_HALF_TO_TOP 		0	0	#LOBJ_NONE				0
+TableData	3		#TB_SLOPE_NONE_TO_HALF 	0	0	#LOBJ_NONE				0
+TableData	3		#TB_SLOPE_HALF_TO_TOP 		0	0	#LOBJ_NONE				0
+
+TableData	3		#TB_TOP						0	0	#LOBJ_NONE				0
+TableData	3		#TB_TOP 					0	1	#LOBJ_NONE				0
+TableData	3		#TB_TOP						0	0	#LOBJ_NONE				0
+TableData	3		#TB_TOP 					0	0	#LOBJ_MISSILE_BIG		0
+TableData	3		#TB_TOP						0	0	#LOBJ_NONE				0
+TableData	3		#TB_TOP 					0	0	#LOBJ_OILTANK				0
+TableData	3		#TB_TOP						0	0	#LOBJ_NONE				0
+TableData	3		#TB_TOP 					0	0	#LOBJ_NONE				0
+TableData	3		#TB_TOP						0	0	#LOBJ_NONE				0
+TableData	3		#TB_TOP 					0	0	#LOBJ_HOUSE_1			0
+TableData	3		#TB_TOP						0	0	#LOBJ_NONE				0
+TableData	3		#TB_TOP 					0	0	#LOBJ_NONE				0
+TableData	3		#TB_TOP						0	0	#LOBJ_OILTANK				0
+TableData	3		#TB_TOP 					0	0	#LOBJ_SILO				0
+TableData	3		#TB_TOP						0	0	#LOBJ_NONE				0
+TableData	3		#TB_TOP 					0	0	#LOBJ_NONE				0
+
+TableData	3		#TB_SLOPE_HALF_TO_TOP 		1	0	#LOBJ_NONE				0
+TableData	3		#TB_SLOPE_NONE_TO_HALF 	1	0	#LOBJ_NONE				0
+
+TableData	2		#TB_TOP 					0	0	#LOBJ_NONE				0
+TableData	2		#TB_TOP						0	0	#LOBJ_NONE				0
+TableData	2		#TB_TOP 					0	0	#LOBJ_MISSILE_BIG		0
+TableData	2		#TB_CURVE_FULL				1	0 	#LOBJ_NONE				0
+TableData	1		#TB_TOP						0	0	#LOBJ_NONE				0
+TableData	1		#TB_TOP 					0	0	#LOBJ_NONE				0
+TableData	2		#TB_CURVE_FULL				0	0 	#LOBJ_NONE				0
+
+TableData	2		#TB_TOP 					0	0	#LOBJ_NONE				0
+TableData	2		#TB_TOP						0	0	#LOBJ_NONE				0
+TableData	2		#TB_TOP 					0	0	#LOBJ_MISSILE_HARD		0
+TableData	2		#TB_CURVE_FULL				1	0 	#LOBJ_NONE				0
+
+TableData	1		#TB_TOP						0	0	#LOBJ_OILTANK			0
+TableData	1		#TB_TOP 					0	0	#LOBJ_MISSILE_BIG		0
+
+TableData	2		#TB_CURVE_FULL				0	0 	#LOBJ_NONE				0
+TableData	2		#TB_TOP 					0	0	#LOBJ_NONE				0
+TableData	2		#TB_TOP						0	0	#LOBJ_NONE				0
+TableData	2		#TB_TOP 					0	0	#LOBJ_SILO				0
+TableData	2		#TB_TOP						0	0	#LOBJ_NONE				0
+TableData	2		#TB_TOP 					0	0	#LOBJ_NONE				0
+
+TableData	3		#TB_SLOPE_NONE_TO_HALF 	0	0	#LOBJ_NONE				0
+TableData	3		#TB_SLOPE_HALF_TO_TOP 		0	0	#LOBJ_NONE				0
+TableData	4		#TB_SLOPE_NONE_TO_HALF 	0	0	#LOBJ_NONE				0
+TableData	4		#TB_SLOPE_HALF_TO_TOP 		0	0	#LOBJ_NONE				0
+TableData	5		#TB_SLOPE_NONE_TO_HALF 	0	0	#LOBJ_NONE				0
+TableData	5		#TB_SLOPE_HALF_TO_TOP 		0	0	#LOBJ_NONE				0
+
+TableData	5		#TB_TOP						0	0	#LOBJ_NONE				0
+TableData	5		#TB_TOP 					0	0	#LOBJ_MISSILE_BIG		0
+TableData	5		#TB_TOP						0	0	#LOBJ_NONE				0
+TableData	5		#TB_CURVE_FULL 				1	0 	#LOBJ_NONE				0
+TableData	3		#TB_TOP						0	0	#LOBJ_SILO				0
+TableData	3		#TB_TOP 					0	0	#LOBJ_NONE				0
+TableData	3		#TB_TOP						0	0	#LOBJ_OILTANK				0
+TableData	3		#TB_TOP 					0	0	#LOBJ_NONE				0
+TableData	5		#TB_CURVE_FULL 				0	0 	#LOBJ_NONE				0
+TableData	5		#TB_TOP 					0	0	#LOBJ_NONE				0
+TableData	5		#TB_TOP 					0	0	#LOBJ_NONE				0
+TableData	5		#TB_TOP 					0	0	#LOBJ_MISSILE_HARD		0
+TableData	5		#TB_TOP 					0	0	#LOBJ_MISSILE_HARD		0
+TableData	5		#TB_TOP 					0	0	#LOBJ_NONE				0
+TableData	5		#TB_TOP 					0	0	#LOBJ_NONE				0
+TableData	5		#TB_CURVE_FULL 				1	0 	#LOBJ_NONE				0
+
+TableData	2		#TB_TOP						0	0	#LOBJ_NONE				0
+TableData	2		#TB_TOP 					0	1	#LOBJ_NONE				0
+TableData	2		#TB_TOP						0	0	#LOBJ_NONE				0
+TableData	2		#TB_TOP 					0	0	#LOBJ_NONE				0
+TableData	2		#TB_TOP						0	0	#LOBJ_HOUSE_1			0
+TableData	2		#TB_TOP 					0	0	#LOBJ_OILTANK			0
+TableData	2		#TB_TOP						0	0	#LOBJ_OILTANK			0
+TableData	2		#TB_TOP 					0	0	#LOBJ_NONE				0
+TableData	2		#TB_TOP						0	0	#LOBJ_NONE				0
+TableData	2		#TB_TOP 					0	0	#LOBJ_MISSILE_BIG		0
+TableData	2		#TB_TOP						0	0	#LOBJ_MISSILE_BIG		0
+TableData	2		#TB_TOP 					0	0	#LOBJ_SILO				0
+TableData	2		#TB_TOP						0	0	#LOBJ_NONE				0
+TableData	2		#TB_TOP 					0	0	#LOBJ_TANKMOVE			100
+
+TableData	3		#TB_CURVE_FULL				0	0	#LOBJ_NONE				0
+TableData	3		#TB_TOP 					0	0	#LOBJ_NONE				0
+TableData	3		#TB_TOP						0	0	#LOBJ_NONE				0
+TableData	3		#TB_TOP 					0	0	#LOBJ_SILO				0
+TableData	3		#TB_TOP						0	0	#LOBJ_NONE				0
+TableData	3		#TB_TOP 					0	0	#LOBJ_NONE				0
+
+TableData	4		#TB_CURVE_FULL				0	0	#LOBJ_NONE				0
+TableData	4		#TB_TOP 					0	0	#LOBJ_NONE				0
+TableData	4		#TB_TOP						0	0	#LOBJ_SILO				0
+TableData	4		#TB_TOP 					0	0	#LOBJ_MISSILE_HARD		0
+TableData	4		#TB_TOP						0	0	#LOBJ_NONE				0
+TableData	4		#TB_TOP 					0	0	#LOBJ_NONE				0
+
+TableData	5		#TB_CURVE_FULL				0	0	#LOBJ_NONE				0
+TableData	5		#TB_TOP 					0	0	#LOBJ_OILTANK				0
+TableData	5		#TB_TOP						0	0	#LOBJ_NONE				0
+TableData	5		#TB_TOP 					0	0	#LOBJ_NONE				0
+TableData	5		#TB_TOP						0	0	#LOBJ_MISSILE_HARD		0
+TableData	5		#TB_TOP 					0	0	#LOBJ_OILTANK			0
+TableData	5		#TB_TOP						0	0	#LOBJ_NONE				0
+TableData	5		#TB_TOP 					0	0	#LOBJ_NONE				0
+TableData	5		#TB_TOP						0	0	#LOBJ_MISSILE_BIG		0
+TableData	5		#TB_TOP 					0	0	#LOBJ_HOUSE_1			0
+TableData	5		#TB_TOP						0	0	#LOBJ_NONE				0
+TableData	5		#TB_CURVE_FULL				1	0	#LOBJ_NONE				0
+
+TableData	2		#TB_TOP						0	0	#LOBJ_MISSILE_BIG		0
+TableData	2		#TB_TOP 					0	0	#LOBJ_OILTANK			0
+TableData	2		#TB_TOP						0	0	#LOBJ_NONE				0
+TableData	2		#TB_TOP 					0	0	#LOBJ_NONE				0
+TableData	2		#TB_TOP						0	0	#LOBJ_NONE				0
+TableData	2		#TB_TOP 					0	0	#LOBJ_MISSILE_HARD		0
+TableData	2		#TB_TOP						0	0	#LOBJ_NONE				0
+TableData	2		#TB_TOP 					0	0	#LOBJ_TANKMOVE			30
+TableData	2		#TB_TOP						0	0	#LOBJ_NONE				0
+TableData	2		#TB_TOP 					0	0	#LOBJ_NONE				0
+TableData	2		#TB_TOP						0	0	#LOBJ_NONE				0
+TableData	2		#TB_TOP 					0	0	#LOBJ_MISSILE_BIG				0
+TableData	2		#TB_TOP						0	0	#LOBJ_NONE				0
+TableData	2		#TB_TOP 					0	0	#LOBJ_NONE				0
+TableData	2		#TB_TOP						0	0	#LOBJ_OILTANK				0
+TableData	2		#TB_TOP 					0	0	#LOBJ_NONE				0
+TableData	2		#TB_TOP						0	0	#LOBJ_TANKMOVE			5
+TableData	2		#TB_TOP 					0	0	#LOBJ_NONE				0
+
+TableData	5		#TB_CURVE_FULL				0	0	#LOBJ_NONE				0
+TableData	5		#TB_TOP 					0	0	#LOBJ_OILTANK			0
+TableData	5		#TB_TOP 					0	0	#LOBJ_NONE				0
+TableData	5		#TB_TOP 					0	0	#LOBJ_NONE				0
+TableData	5		#TB_TOP 					0	0	#LOBJ_NONE				0
+TableData	5		#TB_CURVE_FULL				1	0	#LOBJ_NONE				0
+
+TableData	4		#TB_TOP						0	0	#LOBJ_NONE				0
+TableData	4		#TB_TOP 					0	0	#LOBJ_MISSILE_HARD		0
+TableData	4		#TB_TOP 					0	0	#LOBJ_MISSILE_BIG		0
+TableData	4		#TB_CURVE_FULL				1	0	#LOBJ_NONE				0
+
+TableData	3		#TB_TOP						0	0	#LOBJ_NONE				0
+TableData	3		#TB_TOP 					0	0	#LOBJ_NONE				0
+TableData	3		#TB_TOP 					0	0	#LOBJ_MISSILE_BIG		0
+TableData	3		#TB_TOP						0 	0	#LOBJ_NONE				0
+TableData	3		#TB_TOP 					0	0	#LOBJ_OILTANK				0
+TableData	3		#TB_TOP						0 	0	#LOBJ_NONE				0
+TableData	3		#TB_TOP 					0	0	#LOBJ_NONE				0
+TableData	3		#TB_TOP						0 	0	#LOBJ_OILTANK				0
+TableData	3		#TB_TOP 					0	0	#LOBJ_NONE				0
+TableData	3		#TB_CURVE_FULL				1 	0	#LOBJ_NONE				0
+
+TableData	1		#TB_TOP						0	0	#LOBJ_MISSILE_BIG		0
+TableData	1		#TB_TOP 					0	0	#LOBJ_NONE				0
+TableData	1		#TB_TOP 					0	1	#LOBJ_NONE				0
+TableData	1		#TB_TOP 					0	0	#LOBJ_SILO				0
+TableData	1		#TB_TOP 					0	0	#LOBJ_NONE				0
+TableData	1		#TB_TOP 					0	0	#LOBJ_NONE				0
+TableData	1		#TB_TOP 					0	0	#LOBJ_MISSILE_BIG		0
+TableData	1		#TB_TOP 					0	0	#LOBJ_NONE				0
+TableData	1		#TB_TOP 					0	0	#LOBJ_HOUSE_1			0
+TableData	1		#TB_TOP 					0	0	#LOBJ_NONE				0
+
+TableData	4		#TB_CURVE_FULL				0 	0	#LOBJ_NONE				0
+TableData	4		#TB_TOP 					0	0	#LOBJ_NONE				0
+TableData	4		#TB_TOP 					0	0	#LOBJ_NONE				0
+TableData	4		#TB_CURVE_FULL				1 	0	#LOBJ_NONE				0
+
+TableData	1		#TB_TOP 					0	0	#LOBJ_NONE				0
+TableData	1		#TB_TOP 					0	0	#LOBJ_NONE				0
+TableData	1		#TB_TOP 					0	0	#LOBJ_MISSILE_HARD		0
+TableData	1		#TB_TOP 					0	0	#LOBJ_NONE				0
+TableData	1		#TB_TOP 					0	0	#LOBJ_OILTANK			0
+TableData	1		#TB_TOP 					0	0	#LOBJ_MISSILE_BIG		0
+TableData	1		#TB_TOP 					0	0	#LOBJ_MISSILE_HARD		0
+TableData	1		#TB_TOP 					0	0	#LOBJ_OILTANK			0
+TableData	1		#TB_TOP 					0	0	#LOBJ_SILO				0
+TableData	1		#TB_TOP 					0	0	#LOBJ_NONE				0
+
+TableData	1		#TB_SLOPE_HALF_TO_TOP 		1	0	#LOBJ_NONE				0
+TableData	1		#TB_SLOPE_NONE_TO_HALF 	1	0	#LOBJ_NONE				0
+
+TableData	0		#TB_TOP 					0	0	#LOBJ_NONE				0
+TableData	0		#TB_TOP 					0	0	#LOBJ_NONE				0
+
+; end of level
+TableData	-1		0 							0	0 0 0
+
+

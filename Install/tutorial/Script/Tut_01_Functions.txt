@@ -1,0 +1,97 @@
+;
+; Tutorial #1 - Functions (Vers 2 - 06/02/04)
+;	Written by M.Shamgar
+;
+; This tutorial teaches you : 
+;
+; i. About a Script.
+; ii. About a Function.
+; iii. Passing parameters to a function, or returning them from one.
+; 
+;
+; (NOTE! This tutorial cannot be executed, it just contains instructions)
+;
+
+;--------------------------------------------------------------------------------------------------------------
+; Scripts
+; -------------
+;
+; This file is called a script. A script is made from a collection of commands, and
+; non commands (such as these comments). 
+; 
+; There can only be one command per line - commands cannot be 'chained', 
+; as they can with 'C'. (Catapult is closer to assembler language than to 'C').
+;
+
+;--------------------------------------------------------------------------------------------------------------
+; Functions
+; ------------------
+;
+; A function is a group of commands, that can be jumped to (or called) from somewhere else 
+; in a script (or from a different script). The start of a function is marked by a special command:
+
+Function FUNCTION_NAME PARAMETER_COUNT
+
+; (!!!!!!!) NOTE : From version V1.32b, all commands are linked directly to their corresponding
+; help page in the users guide. Click on the 'Function' command above, then press the right
+; mouse button. You should see an option called 'Command Help' the menu. Select it! This
+; works for ALL commands, and is an excellent way to get more information about a command.
+;
+; 
+; A function requires a name,  which must be unique (there cannot be two or more functions 
+; in a script with the same name). 
+;
+; The function name is followed by a number, which is the number of parameters (or values) 
+; that has to be passed to the function when it is called.
+;
+; A function usually terminates (or Returns) when it hits a 'Return' command. A 'Return' 
+; command can return up to four values or parameters.
+; 
+
+
+;----------------------------------------------------------------
+; Here is an example of a Function (this function does nothing useful):
+
+; this function is called 'HelloWorld' - and takes no parameters
+Function HelloWorld 0
+
+    StringDisplay 10 10 SID_HELLO_WORLD				; display a string
+
+; the function ends, once the "Return" command has been reached.
+Return
+
+
+;--------------------------------------------------------------------------------------------------------------
+; This is a more complex function.. 
+;
+; This function takes two parameters (the comment indicates that they are x,y coordinates)
+; calculates a value from these parameters, then returns this calculated value to the caller.
+;
+Function CalcShipPosition 2		; xpos, ypos
+
+    V_LV0 = V_EV0+20			; 1st passed value is in V_EV0, 2nd passed is in V_EV1
+    V_LV0 += V_EV1*16			; V_LV0 is a general purpose local variable
+
+; the function ends, and returns the newly calculated value to the calling routine.
+Return V_LV0
+
+
+;--------------------------------------------------------------------------------------------------------------
+; Calling a function is easy. The 'Call' command is used, and any parameters that should
+; be passed to the function, follow the name of the function.
+
+	; call the hello world function (no parameters)
+	Call HelloWorld
+ 
+
+	; call the ship position function (two parameters)
+	Call CalcShipPosition 10 10
+
+
+;--------------------------------------------------------------------------------------------------------------
+; Tutorial 2 shows you a practical example of how to use a function,  and
+; introduces a special function, called "Initialise".
+;
+
+
+

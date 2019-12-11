@@ -1,0 +1,125 @@
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;  play a funky little cow flying animation, based on paths
+; 
+
+Function Transitions_Winloop 0
+	If G_WON == 1
+;;; hide all barrels
+		V_LV0 = 1
+		While V_LV0 < 6
+			SpriteSetAttribute V_LV0 [RotScale] 0
+			SpriteSetAttribute V_LV0 [SdFold] 1
+			V_LV0 += 1
+		End
+		G_WON = 2
+		G_WINANIMTIMER = 0
+	End
+
+	V_LV0 = G_FINISHZOOM
+	V_LV0 *= 6
+	V_LV0 /= 5
+	V_LV0 =- V_LV0
+	TileMapSetOffsetY #LAYER_FRONT V_LV0
+	TileMapSetOffsetY #LAYER_BARN V_LV0
+
+	If G_WON == 2
+
+		; slowly make it night again	
+		Call Transitions_MakeNight 242
+	
+		PathGetPos PATH_WINCOW G_WINANIMTIMER V_LV0 V_LV1
+		%SPRITE_SETPOS 0 V_LV0-31 V_LV1-31
+
+		PathGetPos PATH_WINBAL G_WINANIMTIMER V_LV0 V_LV1
+		%SPRITE_SETPOS #BALLOON_SPRITE V_LV0 V_LV1
+
+		G_WINANIMTIMER += 1
+
+		G_FINISHZOOM += 2
+		If G_FINISHZOOM > 140
+			G_WON = 3
+		End
+	End
+
+	If G_WON == 3
+		PathGetPos PATH_WINBAL G_WINANIMTIMER V_LV0 V_LV1
+		%SPRITE_SETPOS  #BALLOON_SPRITE V_LV0 V_LV1
+
+		if G_WINANIMTIMER < G_COW_WIN_PATH_LEN
+			PathGetPos PATH_WINCOW G_WINANIMTIMER G_COW_X G_COW_Y
+			%SPRITE_SETPOS 0 G_COW_X-31 G_COW_Y-31
+		End
+		G_WINANIMTIMER += 1
+
+		G_FINISHZOOM -= 1
+
+		If G_FINISHZOOM <= 0
+			G_FINISHZOOM = 0
+			If G_WINANIMTIMER > 290
+				Call Transitions_NewGame
+			End
+		End
+	End
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; ; reset all state variables etc. to begin a new game
+; 
+
+Function Transitions_NewGame 0
+	G_WON = 0
+	G_FINISHZOOM = 0
+	G_GAMETICK = 0
+	G_IMMUNITY = 120
+	G_GAMESTATE = #GM_RUNNING
+
+	Call Cow_Setup 0
+
+	;;; Initialise 3 sprites
+	V_LV0 = 0
+	While V_LV0 < #NUM_OF_BARRELS
+		Call Barrel_Setup V_LV0
+		V_LV0 += 1
+	End
+
+	MusicStop
+	MusicPlay RID_MOD_NORMAL
+
+; setup balloon:
+	SpriteSetAttribute #BALLOON_SPRITE [RotScale] 1
+	SpriteSetAttribute #BALLOON_SPRITE [SdFold] 0
+	SpriteSetAttribute #BALLOON_SPRITE [SizeTop] 2
+	SpriteSetAttribute #BALLOON_SPRITE [SizeBottom] 3
+	SpriteSetAttribute #BALLOON_SPRITE [TileIndex] 96
+	SpriteSetAttribute #BALLOON_SPRITE [PaletteIndex] 1
+	SpriteSetAttribute #BALLOON_SPRITE [ColourMode] 0
+	SpriteSetAttribute #BALLOON_SPRITE [rotationIndex] 1
+	%SPRITE_SETPOS #BALLOON_SPRITE 48 0
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Incrementally change the R and G components of
+; the passed colour to zero
+; 
+
+Function Transitions_MakeNight 1
+	If G_TICKS&3 == 0
+		PaletteGetR [bg] V_EV0 V_LV5
+		If V_LV5 > 0
+			PaletteSetR [bg] V_EV0 V_LV5-1
+		End
+		PaletteGetG [bg] V_EV0 V_LV5
+		If V_LV5 > 0
+			PaletteSetG [bg] V_EV0 V_LV5-1
+		End
+	End
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;  External functions used by this script
+; 
+
+ExternFunction "Cow.txt" Cow_Setup
+ExternFunction "Barrel.txt" Barrel_Setup
+

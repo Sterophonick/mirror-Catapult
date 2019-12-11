@@ -1,0 +1,197 @@
+;
+; Tutorial #2 - Initialise (Vers 2 - 06/02/04)
+;	Written by M.Shamgar
+;
+; This tutorial teaches you : 
+;
+; i. About the Initialise function.
+; ii. How to execute a script, without running the Initialise function.
+; iii. Different execution modes.
+;
+;
+
+
+; -----------------------------------------------------------------------------------
+; Initialise
+; ----------------
+; The main script in each project usually contains a special function "Initialise".
+;
+; If it exists, Catapult automatically calls this function BEFORE a project has started running. 
+; This function typically contains commands that setup (or initialise) a project.
+;
+; These may include setting a special display mode, loading tiles or palettes, or just
+; initialising the game state, so the remainder of the script runs smoothly.
+;
+;
+; Once the Initialise function completes, Catapult will start executing the script commands
+; from the *start* of the main script (and repeats this every frame). 
+; Because of this, the "Initialise" function should **never** be at the top of the main script.
+;
+
+
+; -----------------------------------------------------------------------------------
+; Under this block of text, is an example of a basic script (which includes an "Initialise" function). 
+;
+; The Initialise function sets up the display, loads a tile graphic
+; and changes a colour in the background palette.
+;
+; The remainder of the script (lines above the "Initialise" function) fills a rectangular region of the
+; screen with this tile.
+;
+
+
+
+; -----------------------------------------------------------------------------------
+; Run the script now. A project can be run/executed by (any of the below options):
+; i. Selecting "Execute" from the 'Execute' menu.
+; ii. Pressing F5. 
+; iii. Clicking on the execute button on the Tools toolbar (green arrow, under 'Run')
+; iv. Right clicking on the Emulator window, and clicking on 'Execute'.
+;
+; The title within the emulator window will change from <Idle> to <Running>.
+
+; Once the script is executing, you should see a green 'grid' appear on the 
+; screen. As time passes, the grid will move towards the right of the screen.
+
+; Now, stop the script executing. This can be done by (any of the below options:
+; i. Pressing F5 (when running)
+; ii. Pressing Control-Space while running (also acts as pause/unpause).
+; iii. Selecting either Execute or Pause from the Execute menu
+; iv.  Right clicking on the Emulator window, and selecting 'Execute Stop'.
+; v. Clicking on the start/pause button in the "Tools" toolbar (green arrow / red pause icon)
+;
+; The title within the emulator window will change from <Running> to <Idle>.
+
+; The animation and movement should stop. 
+; 
+; If you execute the script again, this calls the "Initialise" function again, and 
+; will reset the project. 
+;
+
+; -----------------------------------------------------------------------------------
+; It is possible to continue execution once stopped (i.e. the "Initialise" function 
+; is not called). Select 'Pause' from the Execute menu to pause/unpause the project.
+;
+; Try executing and stopping the script a few times.
+
+
+; -----------------------------------------------------------------------------------
+; (optional - open the "Tilemap Viewer"  (Select 'Tilemap' from the View menu) - and watch the tilemap change
+; as the script is run and stopped. We talk about TileMaps later...
+
+
+; -----------------------------------------------------------------------------------
+; Stop/pause the project execution. 
+;
+; Instead of executing the script continously, we are going to "single step" several times.
+; Each single step executes the project just once.
+
+; To single step (execute) a script :
+; i. Select "Execute-Step" from the Execute menu
+; ii. Press Control-O
+; iii. Click on the single step button in the Tools toolbar.
+
+; You may notice, that the tick count is reported in the [Message Log]. This represents the
+; number of times a script has been executed, since it was initialised. More on this later.
+;
+; (the message log can be made visible or hidden by clicking on the right button under 'Windows'
+; in the "Tools" toolbar. The other button hides/shows the "Script Browser" window.
+; It can also be toggled visible/invisible by pressing the minus key on the numpad).
+
+
+; -----------------------------------------------------------------------------------
+; Well done!!! - you now know about the Initialise function, and how to execute a project!
+;
+; For those keen to jump ahead, follow the below script below and try some of
+; the changes suggested (marked with ***). 
+; 
+; Otherwise it is time to move onto tutorial 3.
+
+
+; --------------------------------------------------------------------------------------------------------------------------------
+; --------------------------------------------------------------------------------------------------------------------------------
+; --------------------------------------------------------------------------------------------------------------------------------
+; Script starts here
+
+	; After a few seconds of execution, this script will stop and display <ERROR> 
+	; in the emulator window. When this happens, just stop/start execution again.
+	; As an exercise, try to find out why this is happening - and work out a way to stop it!
+
+	; If you make a mistake editing a script, have no fear! You can undo any mistakes you make
+	; by selecting "Undo" from the Edit menu. The tutorials prevent any changes from being saved
+	; to disk.
+
+	; *** Catapult lets you edit the code while a project is running! This way you can get immediate
+	; feedback on your changes. Start running this script...
+
+	; --- draw a rectangle of tile 1, into background layer 0
+	V_LV0 = G_TICKS				; copy the number of elapsed ticks since start, into a local variable
+
+	; *** to try - the following line controls the speed that the region will move across the screen
+	; try changing the 20 to another value. (try 10 or 30 - see the effect)
+	; If you break something dont worry! - just stop and start the script again.
+	
+	V_LV0 /= 20					; divide the number of ticks by a speed factor
+
+	; *** this line fills a screen region of 5x5 tiles, from the calculated x position.
+	; try changing all the values (i.e. 5 to 7, or the 10 to 5). 
+	; the last value 1, is the tile index that contains our loaded tile graphic. If you change this
+	; to another tile, the drawn region will change to black (no tile data loaded)
+
+	TileMapFillRect 0 [All] V_LV0 10 5 5 1			; fill region on background 0, with tile index 1
+	
+	; *** this line manipulates the tile graphic (for a nice effect). 
+	; It has a lot of parameters (we will look at most of these later). The last 4 parameters, is the distance 
+	; from the edge of the tile that the scrolling uses (left distance, right, top, bottom).
+	; Try changing some of these last 4 parameters (to between 0 and 7)
+	;
+	; Remember, you can right click on a command and get more information about the command!
+	
+	TileDataCycleRect [bg] [Left] 0 1 1 1 1 0 1 1 1
+	
+	; Try changing the "Left" (scrolling direction) - to Up, Down or Right.
+	
+	; *** Stop the script. Have a closer look at the tile, through the "Tile viewer" (control-4, or
+	; select Tiles from the View menu). 
+	;
+	; Select the green tile (by clicking on it). (increasing the zoom level might be useful..).
+	;
+	; Try single executing the project (or just running it), for a closer view of what is 
+	; happening to the tile.
+	;
+	; If you double click on the tile, the "Tile Editor" will open. Try making changes to the tile graphic, 
+	; see how the changes have an immediate effect on the [Emulator] window.
+
+	; main script ends here
+Return
+
+
+; *** The little comment block below, is called a function header. They help keep the code clean,
+; by separating functions from each other. It is also good practice to add a blurb to the header
+; talking about the function, or anything peculiar about it.
+;
+; Catapult has a number of built-in 'one-press' macros (i.e. pressing one key combination
+; can generate lots of text). Pressing "Control", "Shift", "F" at the same time will generate
+; a function header (try it - you can undo it easily enough!).
+
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Initialise display, tiles & palette 
+; 
+
+Function Initialise 0								; built-in initialise function
+
+	DisplaySetAttribute [BlankDisplay] false		; enable the display
+	DisplaySetAttribute [EnableBG0] true			; enabled background layer 0
+	
+	TileMapSetMapBank 0 31					; make tilemap 0 use memory
+											; at the end of the tile data
+	
+	TileDataLoad [bg] RID_TILE_GREEN_BLOB 1 0	; load a tile into background tile1
+	TileMapFillRect 0 [All] 0 0 32 32 0				; fill entire layer 0 with black/tile 0
+	
+	PaletteSetColour [bg] 1 {0,20,0}				; make background colour 1, green
+
+Return
+
+

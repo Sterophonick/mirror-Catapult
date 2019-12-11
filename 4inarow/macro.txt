@@ -1,0 +1,10 @@
+;;; Catapult macro script file - automatically generated
+;;; any changes made by hand will be lost
+
+
+#CLEAR_THINK_TEXT
+?Clear the 'thinking' text written by the AI
+$TileMapFillRect 0 [all] 0 10 30 1 0
+$
+$
+

@@ -1,0 +1,117 @@
+; =============================================================================================
+; Minimax AI algorithm for 4-in-a-row
+; written by James Hudson
+; This algorithm may be too "smart" for the average player - it may need to
+; make the occasional random "stupid" mistake to make it more interesting.
+; =============================================================================================
+
+; =============================================================================================
+; this constant determines how deep the search will run, and how "clever" the AI is.
+; for example, a number of 4 will look at most 4 moves ahead for the best strategy
+##MINIMAX_SEARCH_DEPTH 3
+; =============================================================================================
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; 
+; 
+
+Function Minimax_GetBestMove 0
+	V_LV1 = -9999
+	V_LV0 = 0
+
+	; check each of the 7 possible moves, and record the strength of each
+	While V_LV0 < 7
+		Array2DGetElement board.token V_LV0 0 V_LV5
+		If V_LV5 == 0		
+			Call MaximiseWinning V_LV0 1
+			Best.weight[V_LV0] = V_RV0
+			If V_RV0 >= V_LV1
+				V_LV1 = V_RV0
+			End
+		Else
+			; will never go here if the row is full
+			Best.weight[V_LV0] = -9999
+		End
+		
+		V_LV0 += 1
+	End
+	
+	; there may be more than 1 optimal move, so pick a random best move
+	V_LV0 ?= 7
+	While Best.weight[V_LV0] != V_LV1
+		V_LV0 ?= 7
+	End 
+	
+Return V_LV0
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; recursive minimax algorithm, returns a weight depending on the strength of this move
+; 
+
+Function MaximiseWinning 2 ; col depth
+	V_LV3 = 0
+	V_LV0 = 0
+	
+	Call GetTopIndex V_EV0
+	V_LV2 = V_RV0-1
+	If V_RV0 == 0
+		; will never make this move if it is illegal
+		Return 0
+	End
+	
+	; whose turn it is (V_LV1) is based on the search tree depth
+	V_LV1 = V_EV1
+	V_LV1 &= 1
+	V_LV1 += 1
+				
+	Array2DSetElement board.token V_EV0 V_LV2 V_LV1	
+	
+	G_TOKENX = V_EV0
+	G_TOKENY = V_LV2	
+
+	Call Game_IsWon
+	If V_RV0 == true
+		V_LV1 -= 1
+		V_LV1 <<= 1
+		V_LV1 -= 1
+
+		; this weight function is arbitrary - as long as it is a higher power than n^(branching factor)
+		V_LV4 = #MINIMAX_SEARCH_DEPTH+1
+		V_LV4 -= V_EV1
+		V_LV4 *= V_LV4
+		V_LV4 *= V_LV4		
+		V_LV1 *= V_LV4
+		Array2DSetElement board.token V_EV0 V_LV2 0						
+		Return V_LV1
+	End
+	
+	If V_EV1 < #MINIMAX_SEARCH_DEPTH
+		While V_LV0 < 7
+			Call MaximiseWinning V_LV0 V_EV1+1
+			V_LV3 += V_RV0
+			V_LV0 += 1			
+		End
+	End
+	
+	Array2DSetElement board.token V_EV0 V_LV2 0			
+	
+Return V_LV3
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; 
+; 
+
+Function GetTopIndex 1 ; col
+	V_LV0 = 0
+	While V_LV0 < 7
+		Array2DGetElement board.token V_EV0 V_LV0 V_LV1
+		If V_LV1 != 0
+			Return V_LV0
+		End
+		V_LV0 += 1
+	End
+Return 7
+
+; =============================================================================================
+
+ExternFunction "4inarow.txt" Game_IsWon

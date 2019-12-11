@@ -1,0 +1,533 @@
+; =======================================================
+; $Source: N:\\REPOS/Current/Data/Catapult/copter/Script/explosions.txt,v $
+; $Date: 2003/03/14 03:39:26 $
+; $Revision: 1.1 $
+; =======================================================
+;
+; 
+; Control and rendering of the objects (buildings, missiles) in the game
+;
+; =============================================================================================
+; at most - should match the max size of the object info array (or be less)
+##OBJECT_MAX	20
+
+; === External Functions ==========================================================================
+
+ExternFunction "collide" Collide_SpriteVrsTiles
+ExternFunction "explosions" Explosion_Create
+ExternFunction "copter" Copter_AddPoints
+ExternFunction "powerup" Powerup_Create
+
+##PLUME_OFFSET 32
+
+; =============================================================================================
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Process all object events during a frame
+;
+
+Function Object_FrameTick 0
+
+	; rotation bank for the falling objects
+	V_LV0 =- G_TICKS*12
+	V_LV0 &= 255
+	
+	RotateAndScale 31 V_LV0 256
+	
+	; tick all objects during this frame
+	Array1DFind 0 0 OBJECT_LIST.state != #OBJECT_STATE_IDLE V_LV0
+	While V_LV0 != -1
+		call TickObject V_LV0
+		Array1DFind V_LV0+1 0 OBJECT_LIST.state != #OBJECT_STATE_IDLE V_LV0
+	End
+
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Create a new object. Pass the coords of the object.
+; Object ID determines the size of the object
+;
+
+Function Object_Create 4			; x, y, type, obj_move
+
+	; return zero ==> no slots available
+	CallRet IsObjectAvailable
+	V_RV0 -= 1
+
+	; read size from ID
+	V_LV0 = OBJECT_INFO.size[V_EV2]
+
+	; get sprite index
+	V_LV2 = OBJECT_LIST.sprite[V_RV0]
+
+	; adjust position?
+	If V_LV0 == #OBJSIZE_16x32	
+		V_EV1 -= 16
+	ElseIf V_LV0 == #OBJSIZE_32x32
+		V_EV1 -= 16
+	End
+
+	; activate sprite, set tile index palette, and size
+	%SpriteShow_NonRot V_LV2
+	SpriteSetAttribute V_LV2 [TileIndex] OBJECT_INFO.TID[V_EV2]
+	SpriteSetAttribute V_LV2 [PaletteIndex] OBJECT_INFO.Pal[V_EV2]
+	Call SetObjectSize V_LV2 V_LV0
+
+	; set state, position, ai & hp
+	OBJECT_LIST.state[V_RV0] = #OBJECT_STATE_ACTIVE
+
+	OBJECT_LIST.x[V_RV0] 			= V_EV0
+	OBJECT_LIST.y[V_RV0] 			= V_EV1
+	OBJECT_LIST.hp[V_RV0] 		= OBJECT_INFO.hp[V_EV2]
+	OBJECT_LIST.ai[V_RV0] 		= OBJECT_INFO.ai[V_EV2]
+	OBJECT_LIST.timer[V_RV0] 		= 0
+	OBJECT_LIST.points[V_RV0] 		= OBJECT_INFO.points[V_EV2]
+	OBJECT_LIST.flashing[V_RV0] 	= 0 
+	OBJect_LIST.powerups[V_RV0]	= OBJECT_INFO.powerups[V_EV2]
+
+	OBJect_LIST.move_limit[V_RV0]	= V_EV3		; pixels to move foward/backward
+	OBJect_LIST.move_count[V_RV0]	= 0			; current move offset
+
+	; set flip flags
+	SpriteSetAttribute V_LV2 [FlipHorizontal] false
+	SpriteSetAttribute V_LV2 [FlipVertical] false
+	
+	%SpriteMove V_LV2 V_EV0 V_EV1
+
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Damage this object. Destroy the object if out of hitpoints.
+; Pass the index of the object.
+; 
+
+Function Object_Damage 2			; object ID, damage points
+
+	; damage object
+	OBJECT_LIST.hp[V_EV0] -= V_EV1
+
+	; play explosion, for something doing a lot of damage
+	if V_EV1 > 1
+		V_LV0 ?= 16
+		V_LV1 ?= 16
+		V_LV0 -= 8
+		V_LV1 -= 8
+		V_LV0 += OBJECT_LIST.x[V_EV0]
+		V_LV1 += OBJECT_LIST.y[V_EV0]
+		call Explosion_Create V_LV0 V_LV1
+	End
+
+	; destroy!
+	If OBJECT_LIST.hp[V_EV0] <= 0
+		Call Object_Destroy V_EV0
+		Return
+	End
+
+	; read current palette index, and store later for restoring
+	If OBJECT_LIST.flashing[V_EV0] == 0 
+		SpriteGetAttribute OBJECT_LIST.sprite[V_EV0] [PaletteIndex] V_LV1
+		OBJECT_LIST.oldpal[V_EV0] = V_LV1
+	End
+	
+	; make object flash
+	OBJECT_LIST.flashing[V_EV0] = 4			; ticks to flash for (lose one tick, because the object tick
+										; is called AFTER this function on the same cycle)
+
+	; change palette
+	SpriteSetAttribute OBJECT_LIST.sprite[V_EV0] [PaletteIndex] #PIX_GLOW
+
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Destroy this object. Adds points to the player, generates
+; a explosion, and removes the object. Pass the index
+; to the object to destroy.
+; 
+
+Function Object_Destroy 1
+
+	; add points to player
+	Call Copter_AddPoints OBJECT_LIST.points[V_EV0]
+
+	; flag as exploding - TBD change position for rotational sprite
+	Array1DGetElement OBJECT_LIST.sprite V_EV0 V_LV2
+	Array1dSetElement OBJECT_LIST.state V_EV0 #OBJECT_STATE_EXPLODING
+	Array1dSetElement OBJECT_LIST.timer V_EV0 0
+	%SpriteShow_Rot V_LV2
+	SpriteSetAttribute V_LV2 [RotationIndex] 31
+
+	%SpRITEHIDE OBJECT_LIST.sprite_2[V_EV0]
+
+	; get coords, create powerup and explosion		
+	V_LV0 = OBJECT_LIST.x[V_EV0]
+	V_LV1 = OBJECT_LIST.y[V_EV0]
+
+	; generate powerups based on type
+	V_LV3 = 0
+	While V_LV3 < OBJECT_LIST.powerups[V_EV0]
+		Call Powerup_Create V_LV0 V_LV1 0
+		V_LV3 += 1
+	End
+
+	; generate explosion	
+	call Explosion_Create V_LV0 V_LV1
+	
+	; shift position to handle change to rotate mode
+	V_LV0 -= 8
+	V_LV1 -= 8
+	Array1DSetElement OBJECT_LIST.x V_EV0 V_LV0
+	Array1DSetElement OBJECT_LIST.y V_EV0 V_LV1
+	
+	%SpriteMove V_LV2 V_LV0 V_LV1
+
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Check for collision of the region passed, with any of
+; the objects. Return the index+1 if a collide occured
+; otherwise return 0. Also pass the index to start testing from
+; 
+
+Function Object_IsCollide 5			; x,y,w,h, start index
+
+	; find first
+	Array1DFind V_LV0 0 OBJECT_LIST.state >= #OBJECT_STATE_ACTIVE V_LV0
+	
+	While V_LV0 != -1
+		; get sprite, and test for collision 
+		Array1dGetElement OBJECT_LIST.sprite V_LV0 V_LV2
+		CollideTestRegionVrsSprite V_LV2 V_EV0 V_EV1 V_EV2 V_EV3 V_LV2
+		if V_LV2 == true
+			return V_LV0+1
+		End
+	
+		; find next
+		Array1DFind V_LV0+1 0 OBJECT_LIST.state >= #OBJECT_STATE_ACTIVE V_LV0
+	End
+
+Return 0
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Initialise the object system
+; Happens once at game startup
+;
+
+Function Object_Initialise 0
+
+	; for all objects
+	V_LV0 = 0
+	V_LV1 = #SIX_OBJECT_1
+	While V_LV0 < #OBJECT_MAX
+	
+		; initialise array info
+		OBJECT_LIST.state[V_LV0] = #OBJECT_STATE_IDLE
+		OBJECT_LIST.sprite[V_LV0] = V_LV1
+		OBJECT_LIST.sprite_2[V_LV0] = V_LV1+1
+		OBJECT_LIST.flashing[V_LV0] = false
+	
+		; init sprites
+		%SpriteHide V_LV1
+		%SpriteHide V_LV1+1
+		%SPRITESIZE_16X32 V_LV1
+		%SPRITESIZE_16X16 V_LV1+1
+		SpriteSetAttribute V_LV1 [PaletteIndex] #PIX_OBJECT_1
+		SpriteSetAttribute V_LV1+1 [PaletteIndex] #PIX_OBJECT_1
+		SpriteSetAttribute V_LV1 [RenderLayer] 1
+		SpriteSetAttribute V_LV1+1 [RenderLayer] 1
+		SpriteSetAttribute V_LV1+1 [DisplayMode] 1
+	
+		V_LV0 += 1
+		V_LV1 += 2
+	End
+	
+	; Use tilelist code - load all objects at once
+	TilelistGroupLoad TLIST_OBJECT [SPRITE] 0 0
+	
+	; --- smoke plume for rockets
+	TileDataLoad [sprite] RID_IMAGE_SMOKE_PLUME #TIX_SMOKE_PLUME 0
+	
+	; load object palette 1 into memory
+	PaletteLoad [sprite] RID_PAL_OBJ_MISSILE #PIX_OBJECT_1
+	PaletteLoad [sprite] RID_PAL_OBJ_OILTANK #PIX_OBJECT_2
+	PaletteLoad [sprite] RID_PAL_OBJ_MISSILE_HARD #PIX_OBJECT_3
+	PaletteLoad [sprite] RID_PAL_OBJ_SILO #PIX_OBJECT_4
+	PaletteLoad [sprite] RID_PAL_OBJ_HOUSE2 #PIX_OBJECT_5
+	PaletteLoad [sprite] RID_PAL_OBJ_TANKBIG #PIX_OBJECT_6
+
+	; create 'glow' palette
+	V_LV0 = #PIX_GLOW
+	V_LV0 <<= 4					; *16 to convert palette bank into index
+	V_LV1 = V_LV0+16
+	While V_LV0 < V_LV1
+		PaletteSetColour [SPRITE] V_LV0 {31,31,31}		; bright white
+		V_LV0 += 1
+	End
+
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Clear all the objects currently present
+;
+
+Function Object_ClearAll 0
+
+	V_LV0 = 0
+	V_LV1 = #SIX_OBJECT_1
+	While V_LV0 < #OBJECT_MAX
+		OBJECT_LIST.state[V_LV0] = #OBJECT_STATE_IDLE
+	
+		%SpriteHide V_LV1
+		%SpriteHide V_LV1+1
+	
+		V_LV0 += 1
+		V_LV1 += 2
+	End
+
+Return
+
+; === Local functions only ========================================================================
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Return index+1 if there are any object slots left to be filled
+; (i.e. another object can be created)
+;
+
+Function IsObjectAvailable 0
+
+	; find first - return 0 (-1+1) if not found, otherwise index+1
+	Array1DFind 0 0 OBJECT_LIST.state == #OBJECT_STATE_IDLE V_LV0
+
+Return V_LV0+1
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Process this active object. All objects should scroll
+; with the map
+;
+
+Function TickObject 1			; index of powerup to tick
+
+	; --- taking damage?
+	If OBJECT_LIST.flashing[V_EV0] > 0
+		Call ProcessFlashing V_EV0
+	End
+
+	; grab state
+	V_LV0 = OBJECT_LIST.state[V_EV0]
+
+	; --- process AI state
+	If V_LV0 == #OBJECT_STATE_ACTIVE
+		Call ProcessAIStateIdle V_EV0
+
+	ElseIf V_LV0 == #OBJECT_STATE_EXPLODING
+		Call ProcessAIStateExploding V_EV0
+
+	ElseIf V_LV0 == #OBJECT_STATE_FLYING_UP
+		Call ProcessAIStateFlyingUp V_EV0 3
+
+	ElseIf V_LV0 == #OBJECT_STATE_FLYING_UP_SLOW
+		Call ProcessAIStateFlyingUp V_EV0 1
+
+	ElseIf V_LV0 == #OBJECT_STATE_ROLLING
+		Call ProcessAIStateRolling V_EV0
+	End
+	
+	; still on screen?	
+	if OBJECT_LIST.y[V_EV0] > -32
+		If OBJECT_LIST.x[V_EV0] >= -16
+			Return
+		End
+	End
+
+	; off screen - hide and clear
+	OBJECT_LIST.state[V_EV0] = #OBJECT_STATE_IDLE
+	%SpriteHide OBJECT_LIST.sprite[V_EV0]
+	%SpriteHide OBJECT_LIST.sprite_2[V_EV0]
+
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Process the logic for a flashing object
+; 
+
+Function ProcessFlashing 1			; object index
+
+	; count down
+	OBJECT_LIST.flashing[V_EV0] -= 1
+
+	; restore palette?
+	If OBJECT_LIST.flashing[V_EV0] == 0
+		SpriteSetAttribute OBJECT_LIST.sprite[V_EV0] [PaletteIndex] OBJECT_LIST.oldpal[V_EV0]
+	End
+
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Process the logic for a object in a IDLE ai state
+; 
+
+Function ProcessAIStateExploding 1			; object index
+
+	; exploding - no collision
+	Array1DGetElement OBJECT_LIST.state V_EV0 V_LV3
+	Array1DGetElement OBJECT_LIST.x V_EV0 V_LV0
+	Array1DGetElement OBJECT_LIST.y V_EV0 V_LV1
+	Array1DGetElement OBJECT_LIST.sprite V_EV0 V_LV2
+
+	OBJECT_LIST.timer[V_EV0] += 1
+
+	; finished travelling explosion path?
+	PathgetLength EXPLODE V_LV5
+	V_LV4 = OBJECT_LIST.timer[V_EV0]
+
+	; calc the position of the object along the path
+	; do not save the position - path is used as a offset from hit position
+	PathgetPos EXPLODE V_LV4 V_RV0 V_RV1
+	Array1DGetElement OBJECT_LIST.x V_EV0 V_LV0
+	Array1DGetElement OBJECT_LIST.y V_EV0 V_LV1
+	V_LV0 += V_RV0
+	V_LV1 += V_RV1
+
+	If V_LV4 < V_LV5
+		%SpriteMove OBJECT_LIST.sprite[V_EV0] V_LV0 V_LV1
+		Return
+	End
+
+	; final explosion
+	Call Explosion_Create V_LV0 V_LV1
+
+	; kill object
+	Array1dSetElement OBJECT_LIST.state V_EV0 #OBJECT_STATE_IDLE
+	%SpriteHide OBJECT_LIST.sprite[V_EV0]
+	%SpriteHide OBJECT_LIST.sprite_2[V_EV0]
+
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Process the logic for a object in a IDLE ai state
+; 
+
+Function ProcessAIStateIdle 1			; object index
+
+	; objects move with level
+	OBJECT_LIST.x[V_EV0] -= 1
+	SpriteSetAttribute OBJECT_LIST.sprite[V_EV0] [Xpos] OBJECT_LIST.x[V_EV0] 
+
+	; chance of rolling?
+	If OBJECT_LIST.ai[V_EV0] == #OBJAI_ROLL
+		V_LV4 ?= 100
+		If V_LV4 < 10	; roll
+			 OBJECT_LIST.state[V_EV0] = #OBJECT_STATE_ROLLING
+		End
+	End
+		
+	; chance of launching?
+	If OBJECT_LIST.ai[V_EV0] == #OBJAI_LAUNCH
+		V_LV4 ?= 100
+		If V_LV4 < 2	; launch!
+			 OBJECT_LIST.state[V_EV0] = #OBJECT_STATE_FLYING_UP
+			Call SetupPlume V_EV0
+		End
+	End
+
+	; only explode once a little onto the screen
+	If OBJECT_LIST.ai[V_EV0] == #OBJAI_LAUNCH_SLOW
+		If OBJECT_LIST.x[V_EV0] < 200
+			V_LV4 ?= 150
+			If V_LV4 < 2	; launch!
+				 OBJECT_LIST.state[V_EV0] = #OBJECT_STATE_FLYING_UP_SLOW
+				Call SetupPlume V_EV0
+			End
+		End
+	End
+
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Process the logic for a object in a FLYING ai state
+; 
+
+Function ProcessAIStateFlyingUp 2			; object index, speed
+
+	; objects move with level
+	V_LV0 = OBJECT_LIST.sprite[V_EV0]
+	OBJECT_LIST.x[V_EV0] -= 1
+	OBJECT_LIST.y[V_EV0] -= V_EV1
+	%SpriteMove V_LV0 OBJECT_LIST.x[V_EV0] OBJECT_LIST.y[V_EV0]
+
+	V_LV0 = OBJECT_LIST.sprite_2[V_EV0]
+	V_LV1 = OBJECT_LIST.x[V_EV0]
+	V_LV2 = OBJECT_LIST.y[V_EV0]
+	%SPRITEMOVE V_LV0 V_LV1 V_LV2+#PLUME_OFFSET
+
+	; alternate plume gfx
+	If G_TICKS %= 2
+		SpriteSetAttribute V_LV0 [TileIndex] #TIX_SMOKE_PLUME
+	Else
+		SpriteSetAttribute V_LV0 [TileIndex] #TIX_SMOKE_PLUME+4
+	End
+	
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Process the logic for a object in a ROLLING ai state
+; 
+
+Function ProcessAIStateRolling 1			; object index
+
+	; objects move with level
+	V_LV0 = OBJECT_LIST.sprite[V_EV0]
+	OBJECT_LIST.x[V_EV0] -= 1
+	
+	; which way to roll?
+	If OBJECT_LIST.move_count[V_EV0] < OBJECT_LIST.move_limit[V_EV0]
+		OBJECT_LIST.x[V_EV0] -= 2
+		OBJECT_LIST.move_count[V_EV0] += 1
+		
+	ElseIf OBJECT_LIST.move_count[V_EV0] > OBJECT_LIST.move_limit[V_EV0]
+		OBJECT_LIST.x[V_EV0] += 2
+		OBJECT_LIST.move_count[V_EV0] -= 1
+
+	End
+	
+	%SpriteMove V_LV0 OBJECT_LIST.x[V_EV0] OBJECT_LIST.y[V_EV0]
+	
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Setup a rocket plume
+; 
+
+Function SetupPlume 1		; sprite index
+
+	; activate 2nd sprite as plume trail..
+	V_LV0 = OBJECT_LIST.sprite_2[V_EV0]
+	%SPRITESHOW_NONROT V_LV0
+	
+	; set position under rocket object..
+	V_LV1 = OBJECT_LIST.x[V_EV0]
+	V_LV2 = OBJECT_LIST.y[V_EV0]
+	%SPRITEMOVE V_LV0 V_LV1 V_LV2+#PLUME_OFFSET
+	
+	; set tile index to epxlosion (for now)
+	SpriteSetAttribute V_LV0 [TileIndex] #TIX_SMOKE_PLUME
+	SpriteSetAttribute V_LV0 [PaletteIndex] #PIX_COPTER
+	
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`
+; Set a sprite to the correct size, given a sprite index and a size ID.
+;
+
+Function SetObjectSize		2			; sprite index, size ID
+
+	If V_EV1 == #OBJSIZE_16x16
+		%SPRITESIZE_16X16 V_EV0
+	ElseIf V_EV1 == #OBJSIZE_16x32
+		%SPRITESIZE_16X32 V_EV0
+	ElseIf V_EV1 == #OBJSIZE_32x32
+		%SPRITESIZE_32X32 V_EV0
+	End
+
+Return
+
+

@@ -1,0 +1,323 @@
+; =======================================================
+; $Source: N:\\REPOS/Current/Data/Catapult/copter/Script/terrain.txt,v $
+; $Date: 2003/03/14 03:39:26 $
+; $Revision: 1.1 $
+; =======================================================
+;
+
+; 
+; Powerup module for Copter game
+;
+; All powerup related functionality
+;
+
+; === External functions ==========================================================================
+
+ExternFunction "copter" Copter_IsPointInSearchlight
+ExternFunction "copter" Copter_AddPoints
+ExternFunction "copter" Copter_AddPower
+
+
+; === Definitions ==========================================================================
+
+; powerups no longer work like this
+;##POWERUP_ID_LIGHT		1		; searchlight sucks in powerups
+;##POWERUP_ID_GUN2		2		; 2nd gun bullet
+;##POWERUP_ID_RAPID_1	3		; rapid fire (once per 15 frames)
+;##POWERUP_ID_RAPID_2	4		; rapid fire (once per 7 frames)
+;##POWERUP_ID_RAPID_3	5		; rapid fire (once per 3 frames)
+
+
+; === Functions==================================================================================
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Process all powerups events during a frame
+;
+
+Function Powerup_FrameTick 0
+
+	; palette cycle for nice effect (slowed down a little..)
+	If G_TICKS&1 == 0
+		PaletteCycle [sprite] 210 217
+	End
+	
+	; tick all powerups during this frame
+	Array1DFind 0 0 POWERUP_LIST.state != #POWERUP_STATE_IDLE V_LV0
+	While V_LV0 != -1
+		call TickPowerup V_LV0
+		Array1DFind V_LV0+1 0 POWERUP_LIST.state != #POWERUP_STATE_IDLE V_LV0
+	End
+
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Create a new powerup. Pass the coords of the powerup.
+; ID determines the type of powerup to create.
+; All powerups are 16x16
+;
+
+Function Powerup_Create 3			; x, y, type
+
+	; return zero ==> no slots available
+	CallRet IsPowerupAvailable
+	V_RV0 -= 1
+
+	; get sprite index
+	V_LV2 = POWERUP_LIST.sprite[V_RV0]
+
+	; activate sprite, set tile index palette
+	%SpRITESIZE_16X16 V_LV2
+	%SpriteShow_NonRot V_LV2
+	SpriteSetAttribute V_LV2 [PaletteIndex] #PIX_POWERUP
+	SpriteSetAttribute V_LV2 [TileIndex] #TIX_POWERUP_BEAM
+	; nice transparent effect
+	SpriteSetAttribute V_LV2 [DisplayMode] 1
+	
+	; set state, position, ai & hp
+	POWERUP_LIST.state[V_RV0] 	= #POWERUP_STATE_ACTIVE
+	POWERUP_LIST.x[V_RV0] 		= V_EV0
+	POWERUP_LIST.y[V_RV0] 		=  V_EV1
+	POWERUP_LIST.points[V_RV0] 	= 50		; for expansion?
+
+	; start at random pt along path
+	PathGetLength PATH_POWERUP_IDLE V_LV1
+	V_LV1 ?= V_LV1
+	Powerup_LIST.timer[V_RV0] 		= V_LV1
+
+	; set flip flags
+	SpriteSetAttribute V_LV2 [FlipHorizontal] false
+	SpriteSetAttribute V_LV2 [FlipVertical] false
+	
+	%SpriteMove V_LV2 V_EV0 V_EV1
+	
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; This powerup has been around too long (or gone off the
+; screen) so destroy it. Also called when picked up
+; by a player
+; 
+
+Function Powerup_Destroy 1
+
+	; hide sprite
+	%SpRITEHIDE POWERUP_LIST.sprite[V_EV0]
+	
+	; mark as unused
+	POWERUP_LIST.state[V_EV0] = #POWERUP_STATE_IDLE
+
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Powerup has been picked up by the player. Bestows 
+; a special ability (powerup) on the player?
+; 
+
+Function Powerup_Pickup 1
+
+	; must be free
+	Assert POWERUP_LIST.state[V_EV0] != #POWERUP_STATE_IDLE
+
+	; Give the player some points
+	Call Copter_AddPoints 50
+	
+	; give the player some power
+	Call Copter_AddPower 3
+	
+	Call 	Powerup_Destroy V_EV0
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Check for collision of the region passed, with any of
+; the objects. Return the index+1 if a collide occured
+; otherwise return 0. Also pass the index to start testing from
+; 
+
+Function Powerup_IsCollide 5			; x,y,w,h, start index
+
+	; find first
+	Array1DFind V_LV0 0 POWERUP_LIST.state >= #POWERUP_STATE_ACTIVE V_LV0
+	
+	While V_LV0 != -1
+		; get sprite, and test for collision 
+		Array1dGetElement POWERUP_LIST.sprite V_LV0 V_LV2
+		CollideTestRegionVrsSprite V_LV2 V_EV0 V_EV1 V_EV2 V_EV3 V_LV2
+		if V_LV2 == true
+			return V_LV0+1
+		End
+	
+		; find next
+		Array1DFind V_LV0+1 0 POWERUP_LIST.state >= #POWERUP_STATE_ACTIVE V_LV0
+	End
+
+Return 0
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Initialise the powerup system.  Happens once at game startup
+;
+
+Function Powerup_Initialise 0
+
+	; --- initialise powerup array
+	; for all powerup slots in the array
+	V_LV0 = 0
+	ArrayGetDimensionX POWERUP_LIST V_LV2
+	V_LV1 = #SIX_POWERUP
+	
+	While V_LV0 < V_LV2
+	
+		; initialise array info
+		POWERUP_LIST.state[V_LV0] = #POWERUP_STATE_IDLE
+		POWERUP_LIST.sprite[V_LV0] = V_LV1
+	
+		; init sprites
+		%SpriteHide V_LV1
+		%SPRITESIZE_16X16 V_LV1
+		SpriteSetAttribute V_LV1 [PaletteIndex] #PIX_POWERUP
+		SpriteSetAttribute V_LV1 [RenderLayer] 1
+
+		V_LV0 += 1
+		V_LV1 += 1
+	End
+	
+	; --- load powerup tiles into memory
+	TileDataLoad [sprite] RID_IMAGE_POWERUP_1 #TIX_POWERUP_BEAM 0
+
+	; --- load powerup palette into memory (all share same pal)
+	PaletteLoad [sprite] RID_PAL_POWERUP #PIX_POWERUP
+
+Return
+
+; === Local functions only ========================================================================
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Return index+1 if there are any powerup slots left to be filled
+; (i.e. another powerup can be created)
+
+Function IsPowerupAvailable 0
+
+	; find first - return 0 (-1+1) if not found, otherwise index+1
+	Array1DFind 0 0 POWERUP_LIST.state == #POWERUP_STATE_IDLE V_LV0
+
+Return V_LV0+1
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Process this active powerup. All powerups scroll with the map
+;
+
+Function TickPowerup 1			; index of powerup to tick
+
+	; grab state
+	V_LV0 = POWERUP_LIST.state[V_EV0]
+
+	; --- process AI state
+	If V_LV0 == #POWERUP_STATE_ACTIVE
+		Call ProcessAIStateIdle V_EV0
+	ElseIf V_LV0 == #POWERUP_STATE_SUCKED
+		Call ProcessAIStateSucked V_EV0
+	End
+	
+	; still on screen?	
+	if POWERUP_LIST.y[V_EV0] > -16
+		If POWERUP_LIST.x[V_EV0] >= -16
+			Return
+		End
+	End
+
+	; off screen - hide and clear
+	Call Powerup_Destroy V_EV0
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Process the logic for a powerup (normal state)
+; 
+
+Function ProcessAIStateIdle 1			; object index
+
+	; picked up by copter?
+	CollideTestRegionVrsSprite POWERUP_LIST.sprite[V_EV0] G_COPTERX G_COPTERY 48 24 V_LV0
+	If V_LV0 == true
+		Call Powerup_Pickup V_EV0
+		Return
+	End
+	
+	; inside copter beam?
+	Call Copter_IsPointInSearchlight POWERUP_LIST.x[V_EV0] POWERUP_LIST.y[V_EV0]
+	If V_RV0 == true
+		; picked up by beam
+		POWERUP_LIST.state[V_EV0] = #POWERUP_STATE_SUCKED
+		Return
+	End
+
+	; powerup follows path by default
+	PathGetLength PATH_POWERUP_IDLE V_LV1
+
+	; advance powerup along path
+	V_LV0 = Powerup_LIST.timer[V_EV0]
+	V_LV2 = V_LV0
+	V_LV0 += 1
+	if V_LV0 > V_LV1
+		; back to start
+		V_LV0 = 0
+	End
+	Powerup_LIST.timer[V_EV0] = V_LV0
+	
+	PathGetPos PATH_POWERUP_IDLE V_LV2 V_EV1 V_EV2
+	PathGetPos PATH_POWERUP_IDLE V_LV0 V_LV3 V_LV4
+
+	; diff between last path pos and new one
+	; also make object move with level, and slowly rise
+	V_LV3 -= V_EV1+1
+	V_LV4 -= V_EV2
+	
+	; make the rise to top slower
+	If G_TICKS&3 == 0
+		V_LV4 -= 1
+	End
+		
+	; --- object follows path, moves with level.. and slowly rises
+	; objects move with level
+	POWERUP_LIST.x[V_EV0] += V_LV3
+	POWERUP_LIST.y[V_EV0] += V_LV4
+
+	%SPRITEMOVE POWERUP_LIST.sprite[V_EV0] POWERUP_LIST.x[V_EV0] POWERUP_LIST.y[V_EV0]
+
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Move towards copter (sucked into beam)
+; 
+
+Function ProcessAIStateSucked 1			; object index
+
+	; picked up by copter?
+	CollideTestRegionVrsSprite POWERUP_LIST.sprite[V_EV0] G_COPTERX G_COPTERY 48 24 V_LV0
+	If V_LV0 == true
+		Call Powerup_Pickup V_EV0
+		Return
+	End
+
+	; move towards copter
+	V_LV0 = POWERUP_LIST.x[V_EV0]
+	V_LV1 = POWERUP_LIST.y[V_EV0]
+	
+	If V_LV0 > G_COPTERX+24
+		V_LV0 -= 3
+	Else
+		V_LV0 += 3
+	End
+
+	If V_LV1 > G_COPTERY+12
+		V_LV1 -= 3
+	Else
+		V_LV1 += 3
+	End
+
+	POWERUP_LIST.x[V_EV0] = V_LV0
+	POWERUP_LIST.y[V_EV0] = V_LV1
+
+	; move sprite
+	%SPRITEMOVE POWERUP_LIST.sprite[V_EV0] POWERUP_LIST.x[V_EV0] POWERUP_LIST.y[V_EV0]
+
+Return
+

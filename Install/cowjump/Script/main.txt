@@ -1,0 +1,472 @@
+;
+; Catapult demo - sample game
+; 
+; -------------------------------------------------------------------------------------
+; 		'Cow Jump'
+; -------------------------------------------------------------------------------------
+;  
+; made by James Hudson using the Catapult Demo Version
+;
+; This game exists for demonstration purposes only.
+;
+; Controls (these can be remapped through the CatapultSettings menu) :
+; (Note - the emulator window must be selected to play!)
+;
+; Left/Right arrow - move cow
+; Up arrow - jump
+; 'space' - start game
+;
+; Objective: Move your bovine over the flashing jump pads to enable her to reach the balloons at the top
+; of the screen. Avoid the falling barrels. Once you reach the balloons, you will be whisked off to a
+; new level. You will be invincible for a short period after you come back down to earth.
+;
+
+; --- Start of main game loop code
+
+; update the intro effect
+G_INTRO_SHIMMER += 1
+
+If G_GAMESTATE == #GM_INTRO
+	Call IntroLoop
+	Return
+End
+
+Call UpdateGlobalRotations
+
+If G_WON > 0
+	Call Transitions_WinLoop
+	Return
+End
+
+If G_GAMESTATE == #GM_OVER
+	If F_IsButtonHeldStart == 1
+		; player wants to start a new game, so turn off intro screen
+		DisplaySetAttribute [EnableBG0] false
+
+		;reset all game states and vars
+		G_LEVEL = 1
+		Call Transitions_NewGame 
+	End
+End
+
+Call GameLoop
+
+; end of main script
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;  Set up all the GBA layers, called once by initialise
+; 
+
+function Main_InitLayers 0
+	;;; general display init, for a real GBA
+	DisplaySetAttribute [BlankDisplay] false
+	DisplaySetAttribute [EnableBG0] true
+	DisplaySetAttribute [EnableBG1] true
+	DisplaySetAttribute [EnableBG2] false
+	DisplaySetAttribute [EnableBG3] false
+	DisplaySetAttribute [EnableSprite] true
+	DisplaySetAttribute [SpriteLayout] 1         ; conseq tile mode
+	
+	; may still be at a strange position if the user has just reset the game
+	TileMapSetOffsetY #LAYER_FRONT 0
+	TileMapSetOffsetY #LAYER_BARN 0
+	
+	; make tilemaps use memory AWAY from tiledata, front layer needs 2 banks cause it is double size
+	TileMapSetMapBank #LAYER_TITLE 30
+	TileMapSetMapBank #LAYER_BACK 31
+	TileMapSetMapBank #LAYER_FRONT 28
+	TileMapSetMapBank #LAYER_BARN 27
+
+	; when the cow flies we don't want the foreground to wrap around so make it 32x64 tiles
+	TileMapSetSize #LAYER_FRONT 2
+
+	; set other layers to 32x32
+	TileMapSetSize #LAYER_TITLE 0
+	TileMapSetSize #LAYER_BARN 0
+	TileMapSetSize #LAYER_BACK 0
+
+	; ensure all layers are using tile bank 0 (first 16k)
+	TileMapSetTileBank 0 0
+	TileMapSetTileBank 1 0
+	TileMapSetTileBank 2 0
+	TileMapSetTileBank 3 0
+
+	; Blank out tile 0, used as blank for all layers
+	TileDataFillTiles [BG] #_COL_16 0 1 0
+	
+	; ensure all layers are set as 16 colour
+	TileMapSetColourMode 0 #_COL_16
+	TileMapSetColourMode 1 #_COL_16
+	TileMapSetColourMode 2 #_COL_16
+	TileMapSetColourMode 3 #_COL_16
+	
+	;;; setup layer 1 appear on top of layer 0
+	TileMapSetPriority #LAYER_TITLE 0
+	TileMapSetPriority #LAYER_FRONT 2
+	TileMapSetPriority #LAYER_BACK 3
+ 	TileMapSetPriority #LAYER_BARN 1
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;  initialisation function is called once, before the main loop begins executing
+; 
+
+function Initialise 0
+
+	; set up the background layers
+	Call Main_InitLayers
+
+;;; load tiles & palettes
+
+	; background tile into index 1 & palette into slot 0
+	TileDataLoad [bg] RID_TILE_BUILDING 1 0
+	PaletteLoad [bg] RID_PAL_BUILDING 0
+
+	; front tiles into index 11 & palette into slot 1
+	TileDataLoad [bg] RID_TILE_FRONT 32 0
+	PaletteLoad [bg] RID_PAL_FRONT 1
+
+	; load sky tiles & palette
+	TileDataLoad [bg] rid_tile_sky #TILE_SKY_START 0
+	PaletteLoad [bg] rid_pal_sky 15
+	
+	TileDataLoad [sprite] RID_TILE_FLOWER #TILE_FLOWER_START 0
+	PaletteLoad [sprite] RID_PAL_FLOWER 3
+
+	;;; load barrel sprite tiles & sprite palette
+	TileDataLoad [sprite] RID_TILE_BARREL 0 0
+	PaletteLoad [sprite] RID_PAL_BARREL 0
+	
+	;;; load cow sprite tiles & sprite palette
+	TileDataLoad [sprite] RID_TILE_COW 32 0
+	PaletteLoad [sprite] RID_PAL_COW 2
+	
+	;;; load balloon sprite tiles & sprite palette
+	TileDataLoad [sprite] RID_TILE_BALLOON 96 0
+	PaletteLoad [sprite] RID_PAL_BALLOON 1
+	
+	;;; draw the "cow jump" intro splash screen into the title tilebank
+	TileDataLoad [bg] RID_TILE_TITLE #TITLE_START 2
+	PaletteLoad [bg] RID_PAL_TITLE 5
+	TileMapLoad #LAYER_TITLE RID_MAP_TITLE 5 5
+	TileMapFillRect #LAYER_TITLE [Palette] 5 5 25 15 5
+	
+
+	;;; load foreground tilemap into layer 1
+	TileMapLoad #LAYER_FRONT RID_MAP_FRONT 0 0
+	TileMapLoad #LAYER_BACK RID_MAP_SKY 0 0	
+	PaletteLoad [bg] RID_PAL_SKY 15
+	
+	;; hide all sprites
+	V_LV0 = 0
+	While V_LV0 < 16
+		SpriteSetAttribute V_LV0 [RotScale] 0
+		SpriteSetAttribute V_LV0 [SdFold] 1
+		V_LV0 += 1
+	End
+	
+	;;; remember the lengths of these paths in globals, to save repeated function calls
+	PathGetLength PATH_BARREL G_BARREL_PATH_LEN
+	PathGetLength PATH_WINCOW G_COW_WIN_PATH_LEN
+	
+	Array1DLoad RES_COS_VALUES Trig
+	
+	; front layer uses palette 1
+	TileMapFillRect #LAYER_FRONT [Palette] 0 0 32 32 1
+	
+	; back layer uses palette 15
+	TileMapFillRect #LAYER_BACK [Palette] 0 0 32 32 15	
+	
+	; load and display building
+	TileMapLoad  #LAYER_BARN RID_MAP_BUILDING 0 0
+	
+	;;; start at level 1, in the intro state
+	G_GAMESTATE = #GM_INTRO
+	G_LEVEL = 1
+	G_INTRO_SHIMMER = 0
+
+	; the sky colour (242) is procedural
+	PaletteSetColour [bg] 242 {0,0,0}
+
+	Call IntroSetup
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; check for bovine/barrel related mishaps
+; 
+
+Function CheckForCollisions 0
+	V_LV0 = 0
+	While V_LV0 < #NUM_OF_BARRELS
+		; +16 because cow is a rotational sprite
+		CollideTestRegionvrsSprite V_LV0+1 G_COW_X+16 G_COW_Y+16 1 1 V_LV1
+		If V_LV1 == true
+			SoundPlay RID_SOUND_HIT
+			Call KillCow
+		End
+		V_LV0 += 1
+	End
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Wait for the user to press the start button
+; 
+
+Function IntroLoop 0
+	If F_IsButtonHeldStart == 1
+		DisplaySetAttribute [EnableBG0] false
+		Call IntroStop
+		Call Transitions_NewGame
+	End
+
+	V_LV0 = 3
+	While V_LV0 < 7
+		V_LV1 = G_TICKS
+		V_LV1 *= V_LV0-5
+		V_LV1 <<= 1
+		If V_LV1 == 0
+			V_LV1 = G_TICKS*5
+		End		
+		V_LV1 &= 255
+
+		RotateAndScale V_LV0 V_LV1 255
+
+		V_LV0 += 1
+	End
+
+	V_LV0 = 16
+	While V_LV0 < 32
+
+		V_LV3 = V_LV0-16
+		V_LV1 = Flower.x[V_LV3]
+		Flower.y[V_LV3] += 1
+		
+		If Flower.y[V_LV3] > 200
+			V_LV1 ?= 240
+			Flower.x[V_LV3] = V_LV1
+			Flower.y[V_LV3] = -32
+		End
+
+		V_LV4 = V_LV0*2
+		V_LV4 += G_TICKS
+		V_LV4 <<= 2
+		V_LV4 &= 255
+		V_LV5 = Trig.cos[V_LV4]
+		V_LV5 >>= 12
+		V_LV1 += V_LV5
+
+		%SPRITE_SETPOS V_LV0 V_LV1 Flower.y[V_LV3]
+
+		V_LV0 += 1
+	End
+
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Removes all the falling flowers
+; 
+
+Function IntroStop 0
+	V_LV0 = 16
+	While V_LV0 < 32
+		%SPRITE_OFF V_LV0
+		V_LV0 += 1
+	End
+
+; show the barn and the level, these remain on throughout the game
+	DisplaySetAttribute [EnableBG2] true
+	DisplaySetAttribute [EnableBG3] true
+
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Setup the intro screen
+; 
+
+Function IntroSetup 0
+	V_LV0 = 16
+	While V_LV0 < 32
+
+		V_LV1 ?= 4
+		V_LV1 += 3
+
+		%SPRITESIZE_32 V_LV0
+		SpriteSetAttribute V_LV0 [paletteIndex] 3
+		SpriteSetAttribute V_LV0 [ColourMode] 0
+		SpriteSetAttribute V_LV0 [sdFold] false
+		SpriteSetAttribute V_LV0 [rotScale] true
+		SpriteSetAttribute V_LV0 [tileIndex] #TILE_FLOWER_START
+		SpriteSetAttribute V_LV0 [rotationIndex] V_LV1
+		SpriteSetAttribute V_LV0 [RenderLayer] 1		; behind title layer
+		
+		V_LV1 ?= 240
+		V_LV2 ?= 200
+
+		V_LV3 = V_LV0-16
+		Array1dSetElement Flower.x V_LV3 V_LV1
+		Array1dSetElement Flower.y V_LV3 V_LV2
+
+		%SPRITE_SETPOS V_LV0 V_LV1 V_LV2
+
+		V_LV0 += 1
+	End
+
+	MusicStop
+	MusicPlay RID_MOD_NORMAL
+	
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; the core game loop, called when a game is running
+; 
+
+Function GameLoop 0
+	G_GAMETICK += 1
+
+	If G_COWDEAD == 0
+		If G_GAMETICK&31 == 0
+			If G_GAMETICK < 900
+				V_LV0 = G_GAMETICK
+				V_LV0 >>= 5
+				PaletteSetR [bg] 242 V_LV0&31
+				PaletteSetG [bg] 242 V_LV0&31
+			End
+		End
+	Else
+		Call Transitions_MakeNight 242
+	End
+
+	V_LV0 = 0
+	While V_LV0 < #NUM_OF_BARRELS
+		Call Barrel_Move V_LV0
+		V_LV0 += 1
+	End
+	
+	Call Cow_Update
+	; give player a chance when they start game
+	if G_IMMUNITY == 1
+		If G_COWDEAD == 0
+			Call CheckForCollisions
+		End
+	Else
+		; make cow flash while it is invulnerable
+		G_IMMUNITY -= 1
+		V_LV0 = G_IMMUNITY
+		V_LV0 >>= 2
+		V_LV0 %= 2
+		If V_LV0 == 1
+			SpriteSetAttribute 0 [SdFold] 1
+			SpriteSetAttribute 0 [RotScale] 0
+		Else
+			SpriteSetAttribute 0 [SdFold] 1
+			SpriteSetAttribute 0 [RotScale] 1
+		End
+	End
+	If G_COWJUMP == 0
+		Call Cow_CheckForJumpPad
+	End
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; display game over message
+; 
+
+Function KillCow 0
+	G_COWDEAD = 1
+	G_GAMESTATE = #GM_OVER
+	G_INTRO_SHIMMER = 1
+	DisplaySetAttribute [EnableBG0] true
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;  spin all the rotators that have a regular rotation animation
+; 
+
+Function UpdateGlobalRotations 0
+; do cos table lookup to make balloon sway in a sine wave
+; we could have used a table, but the trig tables are a big externally-generated binary
+	V_LV0 = G_TICKS
+	V_LV0 <<= 1
+	V_LV0 &= 255
+	V_LV1 = Trig.cos[V_LV0]
+	V_LV1 >>= 14
+	V_LV1 &= 255
+	RotateAndScale 1 V_LV1 256
+	
+; spin the barrel sprites (they both use the same rotation index)
+	V_LV0 = G_TICKS
+	V_LV0 <<= 2
+	V_LV0 *= G_LEVEL
+	RotateAndScale 0 V_LV0 256
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Called by the GBA for every scanline
+; 
+
+Function HBlankCB 1
+	V_LV0 = V_EV0
+	V_LV0 >>= 1
+	PaletteSetB [bg] 242 V_LV0&31 ; procedural sky
+	If G_INTRO_SHIMMER > 60
+		Return
+	End
+	
+	; apply ripple to title layer
+	V_LV0 = G_INTRO_SHIMMER
+	V_LV0 <<= 3
+	V_LV0 += V_EV0*5
+	V_LV0 &= 255
+	V_LV1 = Trig.cos[V_LV0]
+	V_LV2 = 60
+	V_LV2 -= G_INTRO_SHIMMER
+	V_LV1 *= V_LV2
+	V_LV1 >>= 15
+	V_LV1 &= 255
+
+	If V_EV0&1 == 0
+		V_LV1 *= -1
+	End
+
+	TileMapSetOffsetX #LAYER_TITLE V_LV1
+
+;	V_LV1 ?= 3
+;	TileMapSetOffsetY #LAYER_TITLE V_LV1
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;  External functions used by this script
+; 
+
+ExternFunction "Cow.txt" Cow_Update
+ExternFunction "Cow.txt" Cow_CheckForJumpPad
+
+ExternFunction "Barrel.txt" Barrel_Move
+
+ExternFunction "Transitions.txt" Transitions_Winloop
+ExternFunction "Transitions.txt" Transitions_NewGame
+ExternFunction "Transitions.txt" Transitions_MakeNight
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; ---- definitions to make code clearer
+; 
+
+##NUM_OF_BARRELS 3
+##BALLOON_SPRITE 15
+
+ ; what index into the bank to place tiles at
+##TITLE_START 80
+##TILE_SKY_START 200
+##TILE_FLOWER_START 128
+
+; [bg] tile banks
+##LAYER_TITLE 0
+##LAYER_BACK 1
+##LAYER_FRONT 2
+##LAYER_BARN 3
+
+; the current state that the game is in
+##GM_RUNNING 0
+##GM_INTRO 1
+##GM_OVER 2

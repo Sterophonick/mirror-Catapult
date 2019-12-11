@@ -1,0 +1,7 @@
+;;; Catapult script file - automatically generated
+;;; any changes made by hand will be lost
+
+
+#SID_SCORE
+EN : "SCORE"
+

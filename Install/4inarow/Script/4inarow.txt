@@ -1,0 +1,731 @@
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; $Source: N:\\REPOS/Current/Code/Catapult/GuiToolbarMain.cpp,v $
+; $Date: 2003/04/04 01:08:00 $
+; $Revision: 1.77 $ 
+; 
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;
+; 4InARow (aka Connect-4)
+; 
+; Written by Michael Shamgar
+; Improved graphics by Enrique Giersch
+; 
+; Property of Nocturnal Entertainment Australia
+; Freely available demo / code sample - do with it as you please!
+;
+
+; Updated version for V1.30b. Changes include :
+;  - nice main menu background, with HBlank wobble effect
+;  - sprite for the hand cursor
+;  - added sound effect (not in ROM)
+;  - cleaner code
+
+; Controls
+; -----------------------
+; Left/Right arrow - move pointer, 
+; 'A' - drop new piece 
+; 'Enter' - start/restart game
+;
+
+; === Definitions ==========================================================================================
+
+; --- Game states
+##GS_MENU 				0
+##GS_TURN_HUMAN_1		1
+##GS_TURN_HUMAN_2		2
+##GS_GAME_WON_1		3
+##GS_GAME_WON_2		4
+##GS_GAME_DRAW		5
+
+; --- Drop states
+##DS_CURSOR			0
+##DS_DROP				1
+##DS_MOVING			2		; for AI to move to target
+
+; --- Slot types
+##ST_EMPTY				0
+##ST_BLUE				1
+##ST_RED				2
+
+; --- Board size
+##BOARD_W				7
+##BOARD_H				7
+
+; --- Tile indexes
+
+; sprite
+##TID_ARROW			16			; 32x24 image --> 12 tiles
+
+; backgrounds
+##TID_BACKGROUND		64
+
+; --- sprite IDs
+##SID_PIECE				0
+##SID_CURSOR			1
+
+; ==== Tables (constant data)  =========================================================================================
+
+; --- win (check) data for board (directions to scan for a win)
+TableDefine win_array 0 x1 y1 x2 y2
+
+TableData  1	0	-1	0
+TableData  0	1	0	-1
+TableData  1	1	-1	-1
+TableData  1	-1	-1	1
+
+; ==== Functions =========================================================================================
+
+; ------------------------------------------------------------------------------------------------------------------------------------------------
+; Start of main script
+;
+
+	; Call function, based on game state
+	If G_GAMESTATE == #GS_MENU
+		Call GameStateMenu 
+	End
+	
+	If G_GAMESTATE == #GS_TURN_HUMAN_1
+		Call GameStateTurnHuman #ST_BLUE
+	End
+	
+	If G_GAMESTATE == #GS_TURN_HUMAN_2
+		Call GameStateTurnHuman #ST_RED
+	End
+	
+	; end of game states
+	If G_GAMESTATE == #GS_GAME_WON_1
+		Call DisplayCentredText SID_GAME_OVER_P1 8
+		Call DisplayCentredText SID_GAME_PLAY_AGAIN 12
+		Call GameStateWin 
+		
+	ElseIf G_GAMESTATE == #GS_GAME_WON_2
+		Call DisplayCentredText SID_GAME_OVER_P2 8
+		Call DisplayCentredText SID_GAME_PLAY_AGAIN 12
+		Call GameStateWin 
+		
+	ElseIf G_GAMESTATE == #GS_GAME_DRAW
+		Call DisplayCentredText SID_GAME_OVER_DRAW 8
+		Call DisplayCentredText SID_GAME_PLAY_AGAIN 12
+		Call GameStateWin 
+	End	
+Return
+
+; ------------------------------------------------------------------------------------------------------------------------------------------------
+; Wait in the menu state, until the game has been started
+;
+
+Function GameStateMenu 0
+
+	StringDisplay 4 2 SID_MENU_INTRO
+	StringDisplay 1 4 SID_MENU_START
+	
+	If F_IsButtonPressedSelect == true
+		G_GAMESTATE = #GS_TURN_HUMAN_1
+		Call InitialiseGame
+		Call SetupGame
+	End
+		
+Return
+
+; ------------------------------------------------------------------------------------------------------------------------------------------------
+; Process a win - pass id of string to display
+;
+Function GameStateWin 0
+
+	SpriteSetAttribute 0 [Ypos] 200
+	
+	If F_IsButtonPressedSelect == true
+		G_GAMESTATE = #GS_MENU
+		call InitialiseMenu
+	End
+	
+Return
+
+; ------------------------------------------------------------------------------------------------------------------------------------------------
+; Let a human take a turn at moving
+;
+
+Function GameStateTurnHuman 1
+
+	; move cursor?
+	If G_DROPSTATE == #DS_CURSOR
+		If G_GAMESTATE == #GS_TURN_HUMAN_2
+			Call DisplayCentredText SID_THINKING 10
+			
+			; TBD : split into multiple cycles
+			Call Minimax_GetBestMove
+			G_DROPTARGET = V_RV0
+			G_DROPSTATE =  #DS_MOVING
+		Else
+			Call HumanMoveCursor V_EV0
+		End
+	ElseIf G_DROPSTATE == #DS_MOVING
+		; make the AI take a little longer..
+		If G_TICKS&3 > 0
+			Return
+		End
+		
+		; AI has picked a spot, move cursor to spot	
+		If G_DROPTARGET < G_CURSORPOS
+			G_CURSORPOS -= 1
+		ElseIf G_DROPTARGET > G_CURSORPOS
+			G_CURSORPOS += 1
+		End
+		
+		Call DrawArrow G_CURSORPOS
+		
+		If G_DROPTARGET == G_CURSORPOS
+			call StartDrop G_CURSORPOS V_EV0
+			call SetArrowPalette #GS_TURN_HUMAN_1		; switch palette bank on cursor now
+			%CLEAR_THINK_TEXT
+		End
+	Else
+		; --- drop piece
+		G_DROPDIST -= 2
+		G_PIECEPOS += 2
+		SpriteSetAttribute 0 [Ypos] G_PIECEPOS
+	
+		; hit bottom? place tile, vanish sprite
+		If G_DROPDIST <= 0
+			; make 'thud' sound
+			SoundPlay RID_SFX_THUD
+			
+			Call PlaceTileToken G_TOKENX G_TOKENY V_EV0
+	
+			; Win!??
+			Call Game_IsWon
+			If V_RV0 == true
+				; yes!
+				If G_GAMESTATE == #GS_TURN_HUMAN_1
+					G_GAMESTATE = #GS_GAME_WON_1
+				Else
+					G_GAMESTATE = #GS_GAME_WON_2
+				End
+			Else
+				; Draw?
+				Call IsGameDraw
+				If V_RV0 == true
+					G_GAMESTATE = #GS_GAME_DRAW
+				Else
+					; Switch to next player!
+					If G_GAMESTATE == #GS_TURN_HUMAN_1
+						G_GAMESTATE = #GS_TURN_HUMAN_2
+					Else
+						G_GAMESTATE = #GS_TURN_HUMAN_1
+					End
+				End
+			End
+			G_DROPSTATE = #DS_CURSOR
+		End
+	End
+	
+Return
+
+; ---------------------------------------------------------------------------
+; Let a human player decide where to drop a piece
+; 
+
+Function HumanMoveCursor 1
+
+	; move left
+	If F_IsButtonPressedPadLeft == true
+		G_CURSORPOS Max 0 G_CURSORPOS-1
+	End
+
+	; move right
+	If F_IsButtonPressedPadRight == true
+		G_CURSORPOS Min 6 G_CURSORPOS+1
+	End
+
+	Call DrawArrow G_CURSORPOS
+
+	; start drop
+	If F_IsButtonPressedButtonA == true
+		; position available for drop?
+		Array2DGetElement board.token G_CURSORPOS 0 V_LV2
+		If V_LV2 == #ST_EMPTY
+			; switch palette bank on cursor now
+			call SetArrowPalette #GS_TURN_HUMAN_2
+			call StartDrop G_CURSORPOS V_EV0
+		End
+	End
+
+Return
+
+; ---------------------------------------------------------------------------
+; Drop a tile token, at the given x/y of the board
+; 
+
+Function PlaceTileToken 3	; x, y index, piece type
+
+	; calc x, y tile position
+	Call SlotTileX V_EV0
+	V_LV0 = V_RV0
+	Call SlotTileY V_EV1
+	
+	Call DrawToken V_LV0 V_RV0 V_EV2
+Return
+
+; ---------------------------------------------------------------------------
+; Draw a token, at the given x/y position on 
+; tilemap 2
+; 
+
+Function DrawToken 3	; x, y position, piece type
+
+	; select which tile to draw the taken from
+	If V_EV2 == #ST_RED
+		V_LV1 = 1
+	Else
+		V_LV1 = 5
+	End
+
+	; draw a 2x2 tile, for the token
+	TileMapSetAttribute 2 V_EV0 V_EV1 [All] V_LV1
+	TileMapSetAttribute 2 V_EV0+1 V_EV1 [All] V_LV1+1
+	TileMapSetAttribute 2 V_EV0 V_EV1+1 [All] V_LV1+2
+	TileMapSetAttribute 2 V_EV0+1 V_EV1+1 [All] V_LV1+3
+
+	; fill in the palette used by these tiles
+	TileMapFillRect 2 [palette] V_EV0 V_EV1 2 2 1
+Return
+
+; ---------------------------------------------------------------------------
+; Start a piece dropping at the given index
+; 
+
+Function StartDrop 2	; slot, type
+
+	; move sprite to top of screen
+	SpriteSetAttribute 0 [Ypos] 0
+	G_PIECEPOS = 0
+	
+	; set xpos - calc tile offs, convert to sprite off
+	Call SlotTileX V_EV0
+	SpriteSetAttribute 0 [Xpos] V_RV0*8
+	
+	; select the right tiles for this sprite
+	If V_EV1 == #ST_RED
+		SpriteSetAttribute 0 [TileIndex] 0
+	Else
+		SpriteSetAttribute 0 [TileIndex] 4
+	End
+	
+	; set drop state
+	G_DROPSTATE = #DS_DROP
+	
+	; calc drop dist - find first used spot
+	V_LV0 = 0
+	
+	While V_LV0 < #BOARD_H
+		Array2DGetElement board.token V_EV0 V_LV0 V_LV1
+	
+		; found full space? - break out
+		If V_LV1 != #ST_EMPTY
+			BreakMore 2				; breaks out from TWO loops
+		End
+		V_LV0 += 1
+	End
+
+	; find first free	
+	V_LV0 -= 1
+
+	; setup token parms for when tile hits
+	G_TOKENX = V_EV0
+	G_TOKENY = V_LV0
+	
+	; fill next slot
+	Array2DSetElement board.token V_EV0 V_LV0 V_EV1 
+	
+	; calc verti drop dist
+	V_LV0 *= 16
+	G_DROPDIST = V_LV0+32
+	
+Return
+
+; ---------------------------------------------------------------------------
+; Move the hand to the position of the cursor
+;
+
+Function DrawArrow 1	; cursor position
+
+	Call SlotTileX V_EV0
+
+	; move cursor sprite 
+	SpriteSetAttribute #SID_CURSOR [Xpos] V_RV0*8
+	SpriteSetAttribute #SID_CURSOR [Ypos] 0
+	
+Return
+
+; ---------------------------------------------------------------------------
+; Set the palette for the cursor, based on which
+; piece is being held
+;
+
+Function SetArrowPalette 1	; player ID
+
+	If V_EV0 == #GS_TURN_HUMAN_1
+		V_LV0 = 8
+	Else
+		V_LV0 = 4
+	End
+
+	V_LV1 = 4
+	V_LV3 = 25
+	While V_LV1 > 0
+		PaletteGetColour [sprite] V_LV0 V_LV2
+		PaletteSetColour [SPRITE] V_LV3 V_LV2
+		V_LV3 += 1
+		V_LV0 += 1
+		V_LV1 -= 1
+	End
+	
+Return
+
+; ---------------------------------------------------------------------------
+; Given a X slot, calc the X tile offset
+;
+
+Function SlotTileX 1	; index
+
+	V_LV0 = V_EV0*3 
+
+Return V_LV0+5
+
+; ---------------------------------------------------------------------------
+; Given a Y slot, calc the Y tile offset
+;
+
+Function SlotTileY 1	; index
+
+	V_LV0 = V_EV0*2
+
+Return V_LV0+4
+
+; ---------------------------------------------------------------------------
+; Is all slots are taken, game is a draw
+;
+
+Function IsGameDraw 0
+
+	V_LV0 = 0
+	While V_LV0 < 7
+		Call TestArrayPoint V_LV0 0 #ST_EMPTY
+
+		; still a empty spot
+		If V_RV0 == true
+			return false
+		End
+		V_LV0 += 1
+	End
+	
+return true			; no space - draw!
+
+; ---------------------------------------------------------------------------
+; Display a piece of text centred on a given line
+;
+
+Function DisplayCentredText 2	; string ID, yline
+
+	V_LV0 StringGetLength V_EV0
+	
+	; centre text
+	V_LV0 /= 2
+	V_LV1 = 15
+	V_LV1 -= V_LV0
+	
+	StringDisplay V_LV1 V_EV1 V_EV0 
+Return
+
+; ---------------------------------------------------------------------------
+; Using the global position of the token just added,
+; check to see if the game has been won. Returns
+; true if the game is won, otherwise false
+;
+
+Function Game_IsWon 0
+
+	V_LV0 = 0
+	While V_LV0 < 4
+	 	V_LV1 = 1
+	
+		; count pieces in one direction
+		call CountRow G_TOKENX G_TOKENY win_array.x1[V_LV0] win_array.y1[V_LV0] 
+		V_LV1 += V_RV0
+	
+		; count in the other direction
+		call CountRow G_TOKENX G_TOKENY win_array.x2[V_LV0] win_array.y2[V_LV0] 
+		V_LV1 += V_RV0
+	
+		If V_LV1 >= 4
+			Return true			; win - more than 4 pieces
+		End
+		V_LV0 += 1
+	End
+	
+Return false					; no winner yet
+
+; ---------------------------------------------------------------------------
+; Given a X,Y position, count number of conseq 
+; entries in the array match the pattern passed
+; in. Only tests pattern in + dir, does not start
+; start token
+;
+Function CountRow 4		; X,Y, deltaX, deltaY
+
+	Array2DGetElement board.token V_EV0 V_EV1 V_LV0		; get start element
+	
+	V_LV2 = V_EV0
+	V_LV3 = V_EV1
+	V_LV1 = 0
+	While V_LV1 < 4
+		V_LV2 += V_EV2		;; move 1 pt, and test
+		V_LV3 += V_EV3
+		call TestArrayPoint V_LV2 V_LV3 V_LV0
+	
+		If V_RV0 == false
+			Return V_LV1
+		End
+	
+		V_LV1 += 1
+	End
+	
+Return V_LV1
+
+; ---------------------------------------------------------------------------
+; Test a entry in the array for this value. Return
+; false if the indexes are out of bounds, or the entry
+; is different
+
+Function TestArrayPoint 3		; x, y, entry
+
+	; out of bounds check first?
+	If V_EV0 <> 0 #BOARD_W-1
+		Return false
+	End
+	
+	If V_EV1 <> 0 #BOARD_H-1
+		Return false
+	End
+
+	; in bounds, check array
+	Array2DGetElement board.token V_EV0 V_EV1 V_LV0
+	
+	If V_LV0 == V_EV2
+		Return true
+	End
+	
+Return false
+
+; ------------------------------------------------------------------------------------------------------------------------------------------------
+; Setup the screen/board for a game of Connect-4
+;
+
+Function SetupGame 0
+
+	; setup state for 1st piece
+	G_DROPSTATE = #DS_CURSOR
+	G_CURSORPOS = 3
+	
+	; clear bg0 & load board tilemap
+	TileMapFillRect 0 [Tile] 0 0 31 31 0
+	TileMapFillRect 1 [Tile] 0 0 31 31 0
+
+	TileMapLoad 1 RID_TILEMAP_BOARD 0 0
+	TileMapFillRect 1 [Palette] 0 0 31 31 0
+	
+	; draw arrow
+	Call DrawArrow 3
+	
+	; clean board array
+	V_LV0 = 0
+	
+	While V_LV0 < #BOARD_W
+		V_LV1 = 0
+		While V_LV1 < #BOARD_H
+			Array2DSetElement board.token V_LV0 V_LV1 #ST_EMPTY 
+			V_LV1 += 1
+		End
+		V_LV0 += 1
+	End		
+	
+	; setup sprite as dropped piece
+	SpriteSetAttribute #SID_PIECE [sdfold] false
+	SpriteSetAttribute #SID_PIECE [RotScale] false
+	SpriteSetAttribute #SID_PIECE [DisplayMode] 0
+	SpriteSetAttribute #SID_PIECE [ColourMode] 0
+	
+	SpriteSetAttribute #SID_PIECE [SizeTop] #_SPRITE_SIZE16x16_TOP
+	SpriteSetAttribute #SID_PIECE [SizeBottom] #_SPRITE_SIZE16x16_BOTTOM
+	
+	SpriteSetAttribute #SID_PIECE [RenderLayer] 2
+	
+	SpriteSetAttribute #SID_PIECE [PaletteIndex] 0	; 0 - p1, 1 - p2
+	SpriteSetAttribute #SID_PIECE [TileIndex] 0
+	SpriteSetAttribute #SID_PIECE [Ypos] 200		; move sprite out of view
+
+	; setup sprite as moving hand
+	SpriteSetAttribute #SID_CURSOR [sdfold] false
+	SpriteSetAttribute #SID_CURSOR [RotScale] false
+	SpriteSetAttribute #SID_CURSOR [DisplayMode] 0
+	SpriteSetAttribute #SID_CURSOR [ColourMode] 0
+	
+	SpriteSetAttribute #SID_CURSOR [SizeTop] #_SPRITE_SIZE32x32_TOP
+	SpriteSetAttribute #SID_CURSOR [SizeBottom] #_SPRITE_SIZE32x32_BOTTOM
+	
+	SpriteSetAttribute #SID_CURSOR [RenderLayer] 2
+	
+	SpriteSetAttribute #SID_CURSOR [PaletteIndex] 1				; setup a 2nd two palette (for the other piece)
+	SpriteSetAttribute #SID_CURSOR [TileIndex] #TID_ARROW
+	SpriteSetAttribute #SID_CURSOR [Ypos] 200		; move sprite out of view
+	
+Return
+
+; === Initialise routines ==========================================================================================
+
+; ------------------------------------------------------------------------------------------------------------------------------------------------
+; Initialise the menu (tiles, palettes, etc..)
+;
+
+Function InitialiseMenu 0
+
+	; background must be a 256 colour background
+	TileMapSetColourMode 2 #_COL_256
+	
+	; load background tiles
+	TileDataLoad [bg] RID_IMAGE_BG 192 0
+
+	; load 256 colour palette - only first 128 used
+	PaletteLoad [bg] RID_PAL_BG 0
+	
+	; set 256 colour mode 
+	TileMapSetColourMode 2 #_COL_256
+	
+	; load tilemap for background
+	TileMapLoad 2 RID_TILEMAP_BG 0 0
+	
+	; clear layers
+	TileMapFillRect 0 [All] 0 0 32 32 0
+	TileMapFillRect 1 [All] 0 0 32 32 0
+
+	; move sprites off screen
+	SpriteSetAttribute #SID_PIECE [Ypos] 200
+	SpriteSetAttribute #SID_CURSOR [Ypos] 200
+	
+Return
+
+; ---------------------------------------------------------------------------
+; Initialise the game (tiles, palette, etc..)
+;
+
+Function InitialiseGame 0
+
+	; --- load tiles for board
+	TileDataLoad [bg] RID_IMAGE_BOARD 16 0
+
+	; --- load tiles for tokens
+	TileDataLoad [sprite] RID_IMAGE_TOKEN 0 0
+	TileDataLoad [bg] RID_IMAGE_TOKEN 1 0
+
+	; --- load hand/arrow
+	TileDataLoad [sprite] RID_IMAGE_ARROW #TID_ARROW 0
+
+	; load hand palette into bank 1
+	PaletteLoad [sprite] RID_PAL_HAND 1
+	
+	; --- Init colours
+	; load palette for tokens into bg & fg palettes
+	PaletteLoad [SPRITE] RID_PAL_TOKEN 0
+	PaletteLoad [BG] RID_PAL_TOKEN 1
+
+	; load palette for board in bank 0
+	PaletteLoad [BG] RID_PAL_BOARD 0
+
+	; setup background
+	TileMapSetColourMode 2 #_COL_16
+	TileMapFillRect 2 [All] 0 0 32 32 0
+	TileMapSetOffsetX 2 0
+	
+Return
+
+; ---------------------------------------------------------------------------
+; Initialise function, setup display, board, etc..
+;
+
+Function Initialise 0
+
+	; Setup display
+	DisplaySetAttribute [VideoMode] 0			
+	DisplaySetAttribute [SpriteLayout] 1
+	DisplaySetAttribute [BlankDisplay] 0
+	
+	DisplaySetAttribute [EnableBG0] 1
+	DisplaySetAttribute [EnableBG1] 1
+	DisplaySetAttribute [EnableBG2] 1
+	DisplaySetAttribute [EnableBG3] 1
+	DisplaySetAttribute [EnableSprite] 1
+	
+	TileMapSetColourMode 0 #_COL_16
+	TileMapSetColourMode 1 #_COL_16
+	TileMapSetColourMode 2 #_COL_16
+	TileMapSetColourMode 3 #_COL_16
+
+	; Setup tilemap properties
+	; make tilemaps use memory away from tiledata
+	TileMapSetMapBank 0 31			
+	TileMapSetMapBank 1 30
+	TileMapSetMapBank 2 29
+	TileMapSetMapBank 3 28
+	TileMapSetPriority 2 3				
+
+	; ensure each tilemap uses the right tile data
+	TileMapSetTileBank 0 0
+	TileMapSetTileBank 1 0
+	TileMapSetTileBank 2 0
+	TileMapSetTileBank 3 0
+	
+	; ensure each tilemap is the right size (0 = 32x32)
+	TileMapSetSize 0 0
+	TileMapSetSize 1 0
+	TileMapSetSize 2 0
+	TileMapSetSize 3 0
+
+	; clear all tilemaps
+	TileMapFillRect 0 [All] 0 0 32 32 0
+	TileMapFillRect 1 [All] 0 0 32 32 0
+	TileMapFillRect 2 [All] 0 0 32 32 0
+	TileMapFillRect 3 [All] 0 0 32 32 0
+	
+	; clear tile 0 (used to blank out layers)
+	TileDataFillTiles [bg] #_COL_16 0 1 0
+	
+	; --- setup font
+	TileDataLoad [bG] RID_IMAGE_FONT 128 0			; load font tiles into index 128
+
+	StringDisplaySetTarget 0 fontmap_1 128			; setup font (draw to BG0, using fontmap_1, tiles at base index 128)
+	StringDisplaySetColour true 15					; make the font display in 16colour mode, using palette bank 15
+	
+	; --- setup state
+	G_GAMESTATE = #GS_MENU
+	call InitialiseMenu						; setup menu
+	
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; do something funky to background while drawing
+; 
+
+Function HBlankCB 1	; line just drawn
+
+	If G_GAMESTATE == #GS_MENU
+		V_LV0 = G_TICKS
+		V_LV0 += V_EV0
+		V_LV0 /= 6
+		V_LV1 Bounce V_LV0 7
+		
+		TileMapSetOffsetX 2 V_LV1
+	End
+Return
+
+; =============================================================================================
+ExternFunction "minimax.txt" Minimax_GetBestMove

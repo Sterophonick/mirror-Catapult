@@ -1,0 +1,20 @@
+;
+; -------------------------------------------------------------------------------------------------------------
+; For Beginners - useful hints to using Catapult for the first time...
+; -------------------------------------------------------------------------------------------------------------
+;
+; Here are some useful hints/tips to using Catapult:
+;
+; i. TAB - The TAB key will complete most commands, asset names, etc. Use it!
+;
+; ii. F5 - Start / stop project execution by using F5.
+;
+; iii. There are several ways to do most things. Sometimes a tutorial (or the users guide) will only mention one of these.
+;	Find the way that works for you. The methods include using the drop-down menu, keyboard shortcut or toolbar shortcut.
+;
+; iv. The toolbar by default starts with all buttons present. Use the 'Windows' menu to hide some of the buttons. 
+;
+; v. Every command has a full page of help text. Right click on the command (in the script window), and select 'Command Help'.
+;
+;
+

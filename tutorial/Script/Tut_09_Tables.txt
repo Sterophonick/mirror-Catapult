@@ -1,0 +1,244 @@
+;
+; Tutorial #9 - Using Tables and Arrays - (Vers 2 - 15/03/04)
+;	Written by J.Hudson, edited by M.Shamgar
+;
+; This tutorial teaches you about : 
+;
+; i. Using arrays to store static data in tables
+; ii. 2D arrays
+; iii. Saving and loading binary data from arrays
+; iv. Making level editors in Catapult - hints and tips
+; 
+
+
+; ------------------------------------------------------------------------------
+; Tutorial 6 dealt briefly with the concept of arrays - this tutorial will show
+; you how to use arrays for all the data management you need to do in your games.
+;
+; The last two sections provide tips for managing game data effectively.
+;
+
+
+; ------------------------------------------------------------------------------
+; Tables (introduction)
+;
+; A table is a special type of array in Catapult - it cannot be written to, and it
+; contains static data that never changes. In practical terms, it is read-only memory
+; that is stored on the GBA ROM cartridge (rather than RAM within the GBA). 
+;
+; The GBA has a small amount of RAM available for applications (256k), where as a
+; cartridge can store up to 8 Megabytes (or more). As a result, it makes sense to store any
+; static (or read-only) data on the cartridge rather than in RAM.
+;
+; Tables may contain enemy trigger point information, mathematical tables or animation 
+; sequences - anything that needs to be accessed in array form.
+; 
+;
+
+; ------------------------------------------------------------------------------
+; Firstly, let's make a small test table. 
+;
+; 1. Open the Array Editor (Select Arrays from the Assets menu, or press Control^A). 
+;
+; 2. Click on the 'New' button, and change the new array's name to "mytable". 
+;	We will only be using a 1-dimensional array for now, and it needs to
+; 	be able to hold at least 5 entries. 
+;
+; 3. Change "Dim X" to 5 so the array can hold all the data in the table.
+;
+; 4. Tick the "table attached (ROM)" tickbox. 
+;	This tells Catapult that we will be filling the array with data from our script during preprocessing. 
+;
+; Within each entry of the array we want to be able to store two values, let's say the x and y positions
+; of all the enemies in a world. We need to add two elements to "mytable": 
+;
+; 5. Click on the "Create/Duplicate" button twice to create 2 new elements. 
+;
+; 6. Change the name of the first element to "Xpos", and the second to "Ypos".
+;
+; 7. Close the Array Editor.
+;
+
+
+
+; ------------------------------------------------------------------------------
+; Now for some actual Catapult script. Here is the code that we will use to define our
+; table:
+
+TableDefine mytable 0 xpos ypos
+
+TableData 10	4
+TableData 19	17
+TableData 1	6
+TableData 16	17
+TableData 5	11
+
+; This code need not clutter up your executable code; you can use the ExternScript
+; command to include a table from an external file (see Catapult User's Guide for
+; details). Additionally, the table can be anywhere within a script file (i.e. it can be at the
+; very bottom of a script, or right at the top).
+;
+
+; TableDefine tells Catapult to expect a list of data entries for "mytable".
+; The zero means that the data will be loaded into the array starting at index zero.
+;
+; Xpos and ypos are the element names, in the order that they will be presented
+; in the TableData constructs. Each TableData entry describes a single entry in the
+; array.
+;
+; Each time a project is preprocessed, the data from all tables is loaded into their
+; respective arrays. You can use the array viewer (select 'ArrayView' from the 'View' menu)
+; to examine the data within the mytable array (it should match the values within the table).
+; If you change the values within a table, and want them to take effect... preprocess the project
+; (Select 'Preprocess' from the 'Execute' menu).
+; 
+; Using array notation, the following values are now within the array/table:
+;
+; mytable.Xpos[0] = 10
+; mytable.Ypos[0] = 4
+;
+; mytable.Xpos[1] = 19
+; mytable.Ypos[1] = 17
+; 
+; ..etc..
+
+
+; ------------------------------------------------------------------------------
+; Look at the main loop below - it draws the enemy positions stored in our array
+; over and over again. Notice how we use ArrayGetDimensionX to find the size of the
+; array before we iterate through all of its entries. 
+;
+; 1. Execute the project. If the table has been incorrectly setup, you may get an error.
+
+; ==================================
+; CATAPULT SCRIPT BEGINS
+
+	; find out how big array "mytable" is, and load the result into V_LV1
+	ArrayGetDimensionX mytable V_LV1
+
+	; --- loop through all entries in mytable, marking their positions on screen
+	V_LV0 = 0
+	While V_LV0 < V_LV1	
+		; draw a tile from the position stored in mytable[V_LV0]:
+		TileMapSetAttribute 0 mytable.xpos[V_LV0] mytable.ypos[V_LV0] [Tile] 1
+
+		V_LV0 += 1
+	End
+
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Set up the GBA hardware for simple drawing
+; 
+
+Function Initialise 0
+
+	DisplaySetAttribute [BlankDisplay] false		; enable the display
+	DisplaySetAttribute [EnableBG0] true			; enabled background layer 0
+	
+
+	TileMapSetMapBank 0 31					; make tilemap 0 use memory
+											; at the end of the tile data
+	TileDataFillTiles [bg] 0 1 1 1					; make a tile 1 of solid green
+	
+	TileMapFillRect 0 [All] 0 0 32 32 0				; fill entire layer 0 with tile 0
+
+	PaletteSetColour [bg] 1 {0,20,0}				; make background colour 1, green
+
+Return
+
+; ==================================
+; CATAPULT SCRIPT ENDS
+;
+
+; ------------------------------------------------------------------------------
+; Using the Array Viewer
+;
+; We may want to check that our array is storing the data correctly. 
+;
+; 1. Open the Array Viewer (select 'Array View' from the 'View' menu). 
+;
+; 2. Click on "mytable", and then click on a element to view it.
+;
+; The array viewer can let you inspect the contents of all tables and arrays
+; in your project. Check the "auto refresh" button, and the viewer will update
+; automatically in real time.
+
+
+
+
+; ------------------------------------------------------------------------------
+; Using 2D Arrays/Tables
+
+; If you want to store a 2D grid of values, you will need to use the 2D array
+; functions. To define a 2D table, each column needs to be defined separately:
+
+; define column 0:
+;	TableDefine2D mytable 0 0 val		; data starts at X:0,Y:0
+;	TableData 14						; (X:0,Y:0)
+;	TableData 16						; (X:1,Y:0)
+
+; define column 1:
+;	TableDefine2D mytable 0 1 val		; data starts at X:0,Y:1
+;	TableData 14						; (X:0,Y:1)
+;	TableData 16						; (X:1,Y:1)
+
+; To access a 2D array, we cannot use array variables, we need to use the
+; Array2DGetElement functions. See the Catapult Users Guide for further details.
+
+
+
+; ------------------------------------------------------------------------------
+; Saving and Loading Arrays/Tables
+;
+; Tables are great for storing game data that you have edited by hand. However,
+; for storing large quantities of human-unfriendly data, you may want to store
+; it as a binary file. A good example of this would be a 2D tiled world that
+; has been produced by a level editor.
+;
+; To save an array out as a binary file, use the Array1DSave or Array2DSave
+; commands. This will write data to disk, using the resource name you pass. The
+; array data can then be loaded into an array at run-time using Array1DLoad or
+; Array2DLoad commands. Arrays are stored as a BIN resource.
+;
+; For advanced users, you may want to "hack" an array file using C/C++ or some
+; other language to produce a raw binary BIN file. This method can be used to
+; produce math tables, among other things.
+
+
+
+
+; ------------------------------------------------------------------------------
+;  Making custom editors - hints and tips (advanced)
+;
+; Catapult has its own built-in level editor, but you may want to handle data
+; such as enemy positions and event triggering through Catapult's array system.
+;
+; This involves creating an editor, either within your game, or as a
+; separate Catapult project.
+;
+; As mentioned in the previous section, array loading and saving would be very
+; effective for creating 2D levels for games such as Breakout and Boulderdash.
+; However, for side-scrollers and other large games, a table system would be
+; more useful, as it could be fine-tuned by hand and stored in ROM.
+;
+; There is a very useful Catapult command that can be used for autogenerating table
+; data. This is the LogFile command. This command writes a line of text out to the
+; specified file, enabling you to create entire scripts automatically:
+
+;Array1DSort Triggers.y 0 V_LV0-1 -1	; sort triggers by y position
+;
+;LogFile "level.txt" "; ============================================================================================="
+;LogFile "level.txt" "; Level trigger script"
+;LogFile "level.txt" "; ============================================================================================="
+;LogFile "level.txt" ""
+;LogFile "level.txt" "TableDefine Triggers 0 ypos xpos type"
+;V_LV1 = 0
+;While Triggers.y[V_LV1] != -1	; loop until all array entries have been saved out
+;	LogFile "level.txt" "TableData %d %d	#ENEMY_DEFAULT" Triggers.y[V_LV1] Triggers.x[V_LV1]
+;	V_LV1 += 1
+;End
+
+; This code will produce a list of trigger points from an array, and save it to disk,
+; ready to be included in another Catapult project.
+

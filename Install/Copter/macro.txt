@@ -1,0 +1,79 @@
+;;; Catapult macro script file - automatically generated
+;;; any changes made by hand will be lost
+
+
+#SPRITEHIDE
+?Hides a sprite
+$SpriteSetAttribute %0 [RotScale] false
+$SpriteSetAttribute %0 [SdFold] true
+$
+
+#SPRITEMOVE
+?Move a sprite index %0, to position %1, %2
+$SpriteSetAttribute %0 [Xpos] %1
+$SpriteSetAttribute %0 [Ypos] %2
+$
+
+#SPRITESHOW_NONROT
+?Makes a sprite appear, assuming non rotational mode
+$SpriteSetAttribute %0 [RotScale] false
+$SpriteSetAttribute %0 [SdFold] false
+$
+$
+$
+$
+$
+$
+
+#SPRITESHOW_ROT
+?Makes a sprite appear, assuming rotational double sized mode
+$SpriteSetAttribute %0 [RotScale] true
+$SpriteSetAttribute %0 [SdFold] true
+$
+$
+$
+
+#SPRITESHOW_ROTNOFOLD
+?Rotational sprite single sized
+$SpriteSetAttribute %0 [RotScale] true
+$SpriteSetAttribute %0 [SdFold] false
+$
+$
+
+#SPRITESIZE_16X16
+?Make a sprite 16x16 in size
+$SpriteSetAttribute %0 [SizeTop] 0
+$SpriteSetAttribute %0 [SizeBottom] 1
+$
+$
+
+#SPRITESIZE_16X32
+?Make a sprite 16x16 in size
+$SpriteSetAttribute %0 [SizeTop] 2
+$SpriteSetAttribute %0 [SizeBottom] 2
+$
+$
+
+#SPRITESIZE_32X32
+?Make a sprite 32x32 in size
+$SpriteSetAttribute %0 [SizeTop] 0
+$SpriteSetAttribute %0 [SizeBottom] 2
+$
+$
+$
+
+#SPRITESIZE_64X32
+?Make a sprite 64x32 in size
+$SpriteSetAttribute %0 [SizeTop] 1
+$SpriteSetAttribute %0 [SizeBottom] 3
+$
+$
+
+#SPRITESIZE_8X8
+?Make a sprite 8x8 in size
+$SpriteSetAttribute %0 [SizeTop] 0
+$SpriteSetAttribute %0 [SizeBottom] 0
+$
+$
+$
+

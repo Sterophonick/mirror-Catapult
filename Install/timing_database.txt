@@ -1,0 +1,214 @@
+; 
+; --- Catapult timing database ---
+;
+; Values will depend on the algorithm set for each respective command
+; All values are approximations
+; (measures GBA cycles / command)
+
+; Command				V0			V1			V2			V3
+
+
+; --- linear ((V0*U0)/16) + V1
+ArrayClear				4			20
+Array1DLoad				10			20
+Array1DCopy				8			20
+
+Array2DLoad				10			25
+Array2DCopy				8			25
+
+; --- constant commands
+If						50
+IfEqual					50
+IfNotEqual				50
+IfGreater				50
+IfGreaterOrEqual		50
+IfLess					50
+IfLessOrEqual			50
+IfModEqual				500
+IfAndEqual				55		
+
+IfBetweenOrEqual		70
+IfNotBetween			70
+
+While					50
+WhileEqual				50
+WhileNotEqual			50
+WhileGreater			50
+WhileGreaterOrEqual		50
+WhileLess				50
+WhileLessOrEqual		50
+					
+Else					50
+Elseif					50
+End						0
+Break					20
+BreakMore				20
+					
+Call					30
+CallRet					40
+Return					10
+					
+AddTo					20
+EqualMinus				20
+MultiplyBy				20
+DivideBy				200
+ModBy					200
+SubtractFrom			20
+ShiftLeft				20
+ShiftRight				20
+Or						20
+And						20
+Xor						20
+Rand					250
+Min						35
+Max						35
+Bounce					50
+SquareRoot				1000
+EqualTo					15
+Abs						30
+QuickDist				120
+
+ArrayPeek				20
+ArrayPoke				20
+ArrayGetSize			20
+ArrayGetDimensionX		20
+ArrayGetDimensionY		20
+ArrayGetInstanceSize	20
+ArrayBlockPeek			500
+ArrayBlockPoke			500
+
+Array1DGetElement		50
+Array1DSetElement		50
+Array1DIndexCopy		150
+Array1DIndexSwap		250
+Array1DSort				2000
+Array1DSave				0
+Array1DFind				150
+
+Array2DGetElement		50
+Array2DSetElement		50
+Array2DIndexCopy		150
+Array2DSave				0
+Array2DIterate			5000
+Array2DIterateTable		7000
+Array2DFind				250
+
+MatrixIdentity			200
+MatrixRotate			200
+MatrixTranslate			200
+MatrixScale				200
+MatrixApplyToVector		200
+VectorGet				120
+VectorSet				120
+
+LevelDrawRect			350
+LevelGetTile			75
+LevelScroll				150
+LevelSetTile			0
+LevelSetPos				120
+LevelGetDimensionX		50
+LevelGetDimensionY		50
+LevelSelectLayer		25
+
+ResourceSetIndex		50
+ResourceFileExists		50
+ResourceGetSize			50
+ResourcePeek			80
+
+DisplaySetAttribute				100
+DisplaySetMosaic				100
+DisplaySetBlendMode				100
+DisplaySetBlendAttribute		100
+DisplaySetBlendAlphaLevel		100
+DisplaySetBlendTintLevel		100
+DisplaySetBGRotAttribute		100
+DisplayBGRotateAndScale			220
+DisplaySetWindowRegion			100
+DisplaySetWindowAttribute		100
+DisplayGetScanLine				50
+
+PathGetPos				200
+PathGetLength			50
+PathGetDelta			250
+
+TileDataLoad					5000
+TileDataCycleRect				1000
+TileDataChangeColour			5000
+TileDataCopyTiles				1000
+TileDataCopyPartialTile			300
+TileDataCopyMaskedTiles			2000
+TileDataFillTiles				1000
+TileDataPixelSet				150
+TileDataPixelGet				150
+
+TilelistLoad					10000
+TilelistGetAttrib				500
+TilelistCopyAttribToCollide		1000
+TilelistCopyAttribToArray		1000
+
+TileMapLoad						1000
+TileMapGetAttribute				100
+TileMapSetAttribute				100
+TileMapFillRect					500
+TileMapCopyRect					750
+TileMapIncRect					550
+
+TileMapSetColourMode			100
+TileMapSetPriority				100
+TileMapSetTileBank				100
+TileMapSetMapBank				100
+TileMapSetOffsetX				100
+TileMapSetOffsetY				100
+TileMapSetSize					100
+TileMapSetMosaic				100
+TileMapSetTiled					100
+
+PaletteLoad						1000
+PaletteCycle			1000
+PaletteGetR				75
+PaletteGetG				75
+PaletteGetB				75
+PaletteSetR				75
+PaletteSetG				75
+PaletteSetB				75
+PaletteGetColour		50
+PaletteSetColour		50
+
+SpriteSetAttribute				50
+SpriteGetAttribute				75
+RotateSetValue					100
+RotateAndScale					250
+
+StringDisplay					500
+StringDisplayValue				300
+StringDisplayCharacter			200
+StringDisplayPartial			500
+StringDisplaySetTarget			100
+StringDisplaySetFlags			100
+StringDisplaySetColour			100
+StringGetLength					150
+StringGetCharacter				150
+
+StringGetLanguage				25
+StringSetLanguage				25
+
+StringRenderSetTarget			100
+StringRenderGetInfo				100
+
+; additional penalties, based on number of playing channels
+MusicPlay						100
+MusicStop						100
+
+SoundPlay						100
+SoundExPlay						130
+SoundSetProperties				130
+
+DrawLine						250
+DrawTriangle					1000
+DrawSetColour					100
+
+CollideSetTileProperty			150
+CollideTestRegionVrsTiles		1000
+CollideTestSpriteVrsTiles		500
+CollideTestRegionVrsSprite		400
+CollideTestSpriteVrsSprite		250

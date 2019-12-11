@@ -1,0 +1,158 @@
+
+
+; Sprite sizes
+##_8x8		0b0000
+##_16x16	0b0001
+##_32x32	0b0010
+##_64x64	0b0011
+##_16x8		0b0100
+##_32x8		0b0101
+##_32x16	0b0110
+##_64x32	0b0111
+
+##_8x16		0b1000
+##_8x32		0b1001
+##_16x32	0b1010
+##_32x64	0b1011
+
+;Sprite Length Data
+TableDefine spr_lengthdata	0	length
+TableData					1
+TableData					4
+TableData					16
+TableData					64
+TableData					2
+TableData					4
+TableData					8
+TableData					32
+TableData					2
+TableData					4
+TableData					8
+TableData					32
+
+;Stage Data
+TableDefine stagedata 0 	fg1 				bg1 				bg2
+TableData				level_HIGHWAY1	-1				-1
+
+;Section Data
+TableDefine sectiondata 0 	x		ghostrate		ghosttype				hardmode	encounter	
+TableData				0		5			#class_ghost				0			-1
+TableData				4480	20			#class_ghost				0			-1
+TableData				12288	40			#class_wavyghost			0			-1
+TableData				28032	80			#class_wavyghost			0			-1
+TableData				33152	30			#class_ghost				0			-1
+TableData				50048	60			#class_ghost				0			-1
+TableData				68096	5			#class_wavyghost			0			-1
+TableData				74496	100			#class_wavyghost			0			-1
+TableData				83200	50			#class_wavyghost			0			-1
+TableData				90624	20			#class_wavyghost			0			-1
+TableData				107264	5			#class_ghost				0			-1
+TableData				121344	100			#class_wavyghost			1			-1
+TableData				999999	100			#class_wavyghost			0			-1
+
+;Frame data
+TableDefine framedata 1		tileindex				sprsize		resource 		rangeindex
+##index_horse_idle #_here
+TableData				#ofs_horse			#_64x64		sprite_horse	1
+TableData				#ofs_horse			#_64x64		sprite_horse	2
+
+TableData				#ofs_horse			#_64x64		sprite_horse	3
+TableData				#ofs_horse			#_64x64		sprite_horse	4
+TableData				#ofs_horse			#_64x64		sprite_horse	5
+
+TableData				#ofs_horse			#_64x64		sprite_horse	6
+TableData				#ofs_horse			#_64x64		sprite_horse	7
+TableData				#ofs_horse			#_64x64		sprite_horse	8
+##index_horse_die #_here
+TableData				#ofs_horse			#_64x64		sprite_horse	9
+
+TableDefine framedata 18	tileindex				sprsize		resource 		rangeindex
+##index_horse_charge #_here
+TableData				#ofs_horse			#_64x64		sprite_horse	18
+TableData				#ofs_horse			#_64x64		sprite_horse	19
+
+
+TableDefine framedata 20	tileindex				sprsize		resource 		rangeindex
+
+##index_horse_attack #_here
+TableData				#ofs_horse			#_64x64		sprite_horse	20
+TableData				#ofs_horse			#_64x64		sprite_horse	21
+TableData				#ofs_horse			#_64x64		sprite_horse	22
+TableData				#ofs_horse			#_64x64		sprite_horse	23
+
+##index_slash #_here
+TableData				#ofs_slash1			#_32x64		-1			-1
+TableData				#ofs_slash2			#_32x64		-1			-1
+TableData				#ofs_slash3			#_32x64		-1			-1
+TableData				#ofs_slash4			#_32x64		-1			-1
+TableData				#ofs_slash5			#_32x64		-1			-1
+TableData				#ofs_slash6			#_32x64		-1			-1
+TableData				#ofs_slash7			#_32x64		-1			-1
+##index_debris #_here
+TableData				#ofs_debris			#_32x32		-1			-1
+##index_explosion #_here
+TableData				#ofs_smallexplode		#_32x32		-1			-1
+TableData				#ofs_smallexplode+16	#_32x32		-1			-1
+TableData				#ofs_smallexplode+32	#_32x32		-1			-1
+TableData				#ofs_smallexplode+48	#_32x32		-1			-1
+##index_ghost #_here
+TableData				#ofs_ghost01			#_32x32		-1			-1
+TableData				#ofs_ghost02			#_32x32		-1			-1
+##index_hat #_here
+TableData				#ofs_hat				#_16x16		-1			-1
+##index_sword #_here
+TableData				#ofs_sword			#_8x32		-1			-1
+##index_horsepieces #_here
+TableData				#ofs_horsepiece1		#_32x32		-1			-1
+TableData				#ofs_horsepiece2		#_16x16		-1			-1
+TableData				#ofs_horsepiece3		#_16x16		-1			-1
+TableData				#ofs_horsepiece4		#_16x16		-1			-1
+TableData				#ofs_horsepiece5		#_16x16		-1			-1
+##index_manfall #_here
+TableData				#ofs_manfall			#_32x32		-1			-1
+##index_pipefragment #_here
+TableData				#ofs_pipefragment		#_8x8		-1			-1
+##index_hadoken #_here
+TableData				#ofs_hadoken1		#_64x64		-1			-1
+TableData				#ofs_hadoken2		#_64x64		-1			-1
+TableData				#ofs_hadoken3		#_64x64		-1			-1
+TableData				#ofs_hadoken4		#_64x64		-1			-1
+TableData				#ofs_hadoken5		#_64x64		-1			-1
+TableData				#ofs_hadoken6		#_64x64		-1			-1
+TableData				#ofs_hadoken7		#_64x64		-1			-1
+
+;Animation data
+TableDefine animdata 0		startframe			endframe				loop						speed
+##anim_horse_idle		#_here
+TableData				#index_horse_idle		#index_horse_idle+1	#index_horse_idle			2
+##anim_horse_die		#_here
+TableData				#index_horse_die		#index_horse_die		#index_horse_die			6
+##anim_horse_attack	#_here
+TableData				#index_horse_attack	#index_horse_attack+3	#index_horse_attack+3		2
+##anim_horse_charge	#_here
+TableData				#index_horse_charge	#index_horse_charge+1	#index_horse_charge		2
+
+##anim_slash			#_here
+TableData				#index_slash			#index_slash+6		#index_slash+6			2
+##anim_ghost			#_here
+TableData				#index_ghost			#index_ghost+1		#index_ghost				5
+##anim_explosion		#_here
+TableData				#index_explosion		#index_explosion+3	#index_explosion+3		2
+##anim_hadoken		#_here
+TableData				#index_hadoken		#index_hadoken+1		#index_hadoken			2
+##anim_hadoken_dissipate		#_here
+TableData				#index_hadoken+2		#index_hadoken+6		#index_hadoken+2			2
+
+TableDefine deathpiece 0	frame				pal		ofsx		ofsy		vx		vy		windresistance
+TableData				#index_sword			1		28-50	22		-6		-6		-48
+TableData				#index_manfall		1		122-50	106		-5		-6		0
+TableData				#index_hat			1		252-50	0		-5		-10		-32
+TableData				#index_horsepieces	1		530		194		6		-4		-36				;horse head
+TableData				#index_horsepieces+1	1		330		576		8		2		-60				
+TableData				#index_horsepieces+2	1		60		648		-8		0		-48				;horse tail
+TableData				#index_horsepieces+3	1		558		798		10		0		-52				
+TableData				#index_horsepieces+4	1		278		892		0		0		-60
+
+##total_deathpieces	#_here
+
+

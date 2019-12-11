@@ -1,0 +1,25 @@
+;;; Catapult script file - automatically generated
+;;; any changes made by hand will be lost
+
+
+#SID_GAME_OVER_DRAW
+EN : "Draw"
+
+#SID_GAME_OVER_P1
+EN : "You win"
+
+#SID_GAME_OVER_P2
+EN : "computer wins!"
+
+#SID_GAME_PLAY_AGAIN
+EN : "press enter to play again"
+
+#SID_MENU_INTRO
+EN : "Welcome to 4 in a Row"
+
+#SID_MENU_START
+EN : "Press ENTER to start a game"
+
+#SID_THINKING
+EN : "Thinking"
+

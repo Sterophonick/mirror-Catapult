@@ -1,0 +1,83 @@
+
+=================================
+ New features in Catapult v1.40b
+=================================
+
+ For a complete/exhaustive list of changes, see the users guide.
+
+ ---------------
+  New commands
+ ---------------
+
+ - QDist : Use an approximation to calculate the distance between two points in 2D.
+ 
+ - Abs : Calculate the absolute value of a integer.
+ 
+ - Sqrt : Calculate the square root of a positive value.
+ 
+ - LevelSelectLayer : Select one of the layers of a level for display.
+ 
+ - SoundExPlay : Extended sound play.
+
+ - SoundSetProperties : Change properties on a playing sound channel.
+
+ - DisplayGetScanline : Return the current display scanline (simulated).
+
+ - StringRenderSetTarget : Setup rendered font display parameters.
+
+ - StringRenderGetInfo : Return the current status of rendered string display.
+
+
+ ---------------
+  New tools
+ ---------------
+
+  - Database Importer (DI) : Automatically genrerate a script from a .csv database file.
+
+  - Music Editor (ME) : Modify or create new .MOD or .XM tracks.
+
+
+
+ ---------------
+  New features
+ ---------------
+
+  - .XM support : Music engine supports .XM playback as well as .MOD files.
+
+  - Advanced sound support : Apply special effects to sound during playback. Includes pitch bend, looping, panning, volume, etc.
+
+  - Banked palettes : Palette processor supports 256-colour 'banked' palettes (i.e. 16-colour sets)
+
+  - Toolbar : Replaces old 'main' toolbar. Can be customised.
+
+  - Frame timer : Estimates how quickly a project runs on a GBA.
+
+  - Rendered fonts : Non-tiled font text display. Includes new FontMap tool to autosize letters.
+
+  - Layered Levels : Levels now support up to 4 internal layers.
+
+  - Level Import : Generate a level from a imported image(s).
+
+  - Array Shortcuts : Open array viewer or editor directly from a script.
+
+  - Pal resource 'auto' generate : One-press tool to generate palette resource from image resource.
+  
+  - Function browse : Jump straight to any function definition in script editor.
+
+  - Network enabled : Network system enabled for Freeware builds.
+
+  - Find block start/end : Script tools to find the start/end of a matching logic block.
+
+  - Hide emulator window : Hide emulator window when it is inactive.
+
+  - New debug tools : 'Run to cursor' & 'Step out of' debug modes added.
+
+  - Generate table header : New array editor tool can automatically insert a table header into a script.
+
+  - String filter : Strings in the string editor can be filtered by name.
+
+  - String insert : Auto insert a string ID into the script from the string editor.
+
+  - Improved Path Editor : Move existing point, zoom, move emulator window, etc.
+
+  - << , >> : Available as preprocessor / definition operators.

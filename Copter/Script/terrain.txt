@@ -1,0 +1,514 @@
+; =======================================================
+; $Source: N:\\REPOS/Current/Data/Catapult/copter/Script/terrain.txt,v $
+; $Date: 2003/03/14 03:39:26 $
+; $Revision: 1.1 $
+; =======================================================
+;
+; 
+; Terrain module for Copter game
+;
+; Draws terrain from array defined terrain data
+;
+
+; === External Functions =========================================================================================
+
+ExternFunction "objects" Object_Create
+ExternFunction "objects" Object_ClearAll
+
+; === Terrain functions ==============================================================
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`
+; Tick the terrain - any slow routines are done later (in Scroll). Scrolls the 
+; terrain offsets
+;
+Function Terrain_FrameTick 0
+
+	; scroll tilemap layers
+	G_SCROLL += 1
+
+	If G_SCROLL %= 16
+		; copy terrain 2 tiles to the left
+		TileMapCopyRect #LID_TERRAIN #LID_TERRAIN [All] 2 0 0 0 30 32
+		
+		; Update trip meter
+		Call Terrain_UpdateTripMeter
+
+		; reset scroll		
+		G_SCROLL = 0
+	End
+	
+	TileMapSetOffsetX #LID_TERRAIN G_SCROLL
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`
+; Draw a new portion of the terrain every 16 pixels
+;
+Function Terrain_Scroll 0
+
+	If G_SCROLL != 0
+		Return
+	End
+
+	; scrolling intro - no terrain
+	if G_COPTERSTATE == #PLAYER_STATE_INTRO
+		Return
+	End
+
+	; scrolling outro - no terrain
+	if G_COPTERSTATE == #PLAYER_STATE_OUTRO
+		Return
+	End
+	if G_COPTERSTATE == #PLAYER_STATE_FINISHED
+		Return
+	End
+
+	; mark new checkpoint?
+	if Level00.Checkpoint[G_LEVELINDEX] == true
+		G_CHECKPOINT = G_LEVELINDEX
+	End
+		
+	; get new strip from level
+	V_LV0 = LEVEL00.Height[G_LEVELINDEX]
+	V_LV2 = LEVEL00.Item[G_LEVELINDEX]
+
+	; draw new strip off screen
+	call Terrain_DrawStrip V_LV0 LEVEL00.Gfx[G_LEVELINDEX] V_LV2 LEVEL00.Flags[G_LEVELINDEX] LEVEL00.ObjMove[G_LEVELINDEX]
+
+	; next level line (wrap around?)
+	G_LEVELINDEX += 1
+	V_LV0 = LEVEL00.height[G_LEVELINDEX]
+	If V_LV0 == -1
+		; end of level reached
+		G_COPTERSTATE = #PLAYER_STATE_OUTRO
+		
+		; timer, for when entire level has scrolled off
+		; starts following path
+		G_OUTRO_TIMER = 240
+	End
+	
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`
+; Generate a portion of flat terrain, from the last checkpoint
+;
+Function Terrain_GenerateFromCheckpoint 0
+
+	; clear all objects
+	Call Object_ClearAll
+	
+	G_LEVELINDEX = G_CHECKPOINT
+	G_SCROLL = 0
+
+	V_LV0 = 15
+	While V_LV0 > 0
+	
+		V_LV1 = LEVEL00.Height[G_LEVELINDEX]
+		V_LV2 = LEVEL00.Item[G_LEVELINDEX]
+	
+		call Terrain_DrawStrip V_LV1 LEVEL00.Gfx[G_LEVELINDEX] #LOBJ_NONE LEVEL00.Flags[G_LEVELINDEX] 0
+		TileMapCopyRect #LID_TERRAIN #LID_TERRAIN [All] 2 0 0 0 30 32
+		V_LV0 -= 1
+	End
+
+	TileMapSetOffsetX #LID_TERRAIN G_SCROLL
+	
+	; update trip meter
+	Call Terrain_UpdateTripMeter
+
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`
+; Terrain initialisation function
+;
+; Loads terrain tiles, palettes, etc..
+;
+
+Function Terrain_Initialise 0
+
+	; TBD: change tiles, based on level?
+	; load city
+	TileDataLoad [bg] RID_TILESET_LVL01_LAYER01 #TIX_CITY_BLOCK_1 0
+
+	; city palette (bank 0)
+	PaletteLoad [bg] RID_PAL_CITY1 0
+	
+	; reset level drawing index
+	G_CHECKPOINT = 0
+	G_LEVELINDEX = 0
+	G_SCROLL = 0
+	
+	; values from previous terrain block
+	G_LASTHEIGHT = 0
+	G_LASTJOIN = #TJ_NONE
+	
+	; Calc length of level (find -1
+	Array1DFind 0 0 LEVEL00.Height == -1 G_LEVELSIZE
+	G_LEVELSIZE += 30		; add size of screen as well
+	
+	; Setup sprite for trip meter
+	TileDataLoad [sPRITE] RID_IMAGE_TRIP_INDI #TIX_TRIP_INDICATOR 0
+	SpriteSetAttribute #SIX_TRIP_METER [RenderLayer] 0
+	SpriteSetAttribute #SIX_TRIP_METER [Ypos] #TRIPMETER_YPOS*8
+	SpriteSetAttribute #SIX_TRIP_METER [TileIndex] #TIX_TRIP_INDICATOR
+	%SPRITESHOW_NONROT #SIX_TRIP_METER
+
+	; ensure level data is ok!
+	Assert G_LEVELSIZE != -1	
+	Assert G_LEVELSIZE > 0	
+
+	Call Terrain_DrawTripMeter
+	
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`
+; Draw the trip meter for this level
+;
+
+Function Terrain_DrawTripMeter 0
+
+	; one knob on either end
+	TileMapSetAttribute #LID_HUD #TRIPMETER_XPOS #TRIPMETER_YPOS [All] #TIX_TIP_METER
+	TileMapSetAttribute #LID_HUD #TRIPMETER_XEND #TRIPMETER_YPOS [All] #TIX_TIP_METER
+	TileMapSetAttribute #LID_HUD #TRIPMETER_XEND #TRIPMETER_YPOS [FlipHorizontal] true
+
+	; .. bar in the middle..
+	TileMapFillRect #LID_HUD [All] #TRIPMETER_XPOS+1 #TRIPMETER_YPOS #TRIPMETER_XLEN 1 #TIX_TIP_METER+1
+	
+	; make the bar use the font palette bank
+	TileMapFillRect #LID_HUD [Palette] #TRIPMETER_XPOS #TRIPMETER_YPOS #TRIPMETER_XLEN+2 1 14
+	
+	; Display text
+	StringDisplay 1 #TRIPMETER_YPOS SID_TRIP_START
+	StringDisplay #TRIPMETER_XEND+2 #TRIPMETER_YPOS SID_TRIP_GOAL
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`
+; Update the tripmeter position. A single sprite is used to indicate where
+; the trip is up to.
+;
+
+Function Terrain_UpdateTripMeter 0
+
+	; Calc progress through the level
+	V_LV0 = 16+#TRIPMETER_XLEN*8		; length in pixels
+	
+	V_LV0 *= G_LEVELINDEX
+	V_LV0 /= G_LEVELSIZE
+	V_LV0 += #TRIPMETER_XPOS*8
+
+	; move sprite to position	
+	SpriteSetAttribute #SIX_TRIP_METER [Xpos] V_LV0
+
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`
+; Draw a strip of terrain to the rightmost edge of the screen (off the screen)
+; A strip is 2 tiles wide
+;
+Function Terrain_DrawStrip 5		; pass the 5 params from the level data in : height, type, item, flags, obj_move
+
+	V_LV5 = V_LV0
+	
+	; blank out layer region first
+	TileMapFillRect #LID_TERRAIN [All] 30 0 2 20 0
+	
+	; starting height (ground) (and calc pixel height)
+	V_LV0 = 0 
+	V_LV2 = 160
+	
+	; draw solid region under top tile
+	While V_EV0 > 0
+		Call DrawBlock2x2 #TB_SOLID V_LV0 0
+		V_LV0 += 1
+		V_EV0 -= 1
+		V_LV2 -= 16
+	End
+	
+	; draw top tile
+	Call DrawBlock2x2 V_EV1 V_LV0 V_EV3
+	
+	; draw any 'walls' (for big height changes)
+	Call DrawWalls V_LV0 G_LASTHEIGHT
+
+	; join edges under tile
+	Call JoinEdges V_EV1 V_LV0 V_EV3
+
+	; remember for next wall
+	G_LASTHEIGHT = V_LV0
+
+	V_LV2 -= 16
+	
+	; create a object?
+	if V_EV2 == #LOBJ_NONE
+		Return
+	End
+
+	; pass object (and position) to object create - position is adjusted
+	; based on the object size	
+	call Object_Create 240 V_LV2 V_EV2 V_LV5
+
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Draw a single 2x2 tile block at the edge of the screen. Uses the block id
+; to lookup the level tile array, and find the right tile indexes to use.
+;
+
+Function DrawBlock2x2 3		; 0 - block id, 1 - block height, 2 - flags
+
+	; set x/y coords
+	V_LV0 = 30
+	V_LV1 = 20
+	V_LV1 -= V_EV1*2
+	
+	; --- faster version - directly writes into Vram at right position
+	; calc vram offset (terrain is bank 30 x 2k)
+	; each tile is 2 bytes, each line is 32 tiles (64 bytes)
+	V_LV3 = 30
+	V_LV3 += V_LV1*32
+	V_LV3 <<= 1
+	V_LV3 += 0xf000
+
+	; use the level tile array to lookup the correct tile indexes
+	If V_EV2 == 0
+		Array2DGetElement LEVEL_TILES.t1 V_EV0 0 V_LV2
+		VRAM.u16[V_LV3] = V_LV2
+		
+		Array2DGetElement LEVEL_TILES.t2 V_EV0 0 V_LV2
+		VRAM.u16[V_LV3+2] = V_LV2
+		
+		Array2DGetElement LEVEL_TILES.t3 V_EV0 0 V_LV2
+		V_LV3 += 64
+		VRAM.u16[V_LV3] = V_LV2
+		
+		Array2DGetElement LEVEL_TILES.t4 V_EV0 0 V_LV2
+		VRAM.u16[V_LV3+2] = V_LV2
+	Else
+		; flipped block
+		Array2DGetElement LEVEL_TILES.t2 V_EV0 0 V_LV2
+		V_LV2 |= #_TILEMAP_FLIPH	; set fliph bit
+		VRAM.u16[V_LV3] = V_LV2
+;		TileMapSetAttribute #LID_TERRAIN V_LV0 V_LV1 [All] V_LV2
+;		TileMapSetAttribute #LID_TERRAIN V_LV0 V_LV1 [FlipHorizontal] 1
+		
+		Array2DGetElement LEVEL_TILES.t1 V_EV0 0 V_LV2
+		V_LV2 |= #_TILEMAP_FLIPH	; set fliph bit
+		VRAM.u16[V_LV3+2] = V_LV2
+;		TileMapSetAttribute #LID_TERRAIN V_LV0+1 V_LV1 [All] V_LV2
+;		TileMapSetAttribute #LID_TERRAIN V_LV0+1 V_LV1 [FlipHorizontal] 1
+		
+		Array2DGetElement LEVEL_TILES.t4 V_EV0 0 V_LV2
+		V_LV2 |= #_TILEMAP_FLIPH	; set fliph bit
+		V_LV3 += 64
+		VRAM.u16[V_LV3] = V_LV2
+;		TileMapSetAttribute #LID_TERRAIN V_LV0 V_LV1+1 [All] V_LV2
+;		TileMapSetAttribute #LID_TERRAIN V_LV0 V_LV1+1 [FlipHorizontal] 1
+		
+		Array2DGetElement LEVEL_TILES.t3 V_EV0 0 V_LV2
+		V_LV2 |= #_TILEMAP_FLIPH	; set fliph bit
+		VRAM.u16[V_LV3+2] = V_LV2
+;		TileMapSetAttribute #LID_TERRAIN V_LV0+1 V_LV1+1 [All] V_LV2
+;		TileMapSetAttribute #LID_TERRAIN V_LV0+1 V_LV1+1 [FlipHorizontal] 1
+	End
+
+	; --- slower version (both work fine)	
+	; use the level tile array to lookup the correct tile indexes
+;	If V_EV2 == 0
+;		Array2DGetElement LEVEL_TILES.t1 V_EV0 0 V_LV2
+;		TileMapSetAttribute #LID_TERRAIN V_LV0 V_LV1 [All] V_LV2
+;		
+;		Array2DGetElement LEVEL_TILES.t2 V_EV0 0 V_LV2
+;		TileMapSetAttribute #LID_TERRAIN V_LV0+1 V_LV1 [All] V_LV2
+;		
+;		Array2DGetElement LEVEL_TILES.t3 V_EV0 0 V_LV2
+;		TileMapSetAttribute #LID_TERRAIN V_LV0 V_LV1+1 [All] V_LV2
+;		
+;		Array2DGetElement LEVEL_TILES.t4 V_EV0 0 V_LV2
+;		TileMapSetAttribute #LID_TERRAIN V_LV0+1 V_LV1+1 [All] V_LV2
+;	Else
+;		; flipped block
+;		Array2DGetElement LEVEL_TILES.t2 V_EV0 0 V_LV2
+;		TileMapSetAttribute #LID_TERRAIN V_LV0 V_LV1 [All] V_LV2
+;		TileMapSetAttribute #LID_TERRAIN V_LV0 V_LV1 [FlipHorizontal] 1
+;		
+;		Array2DGetElement LEVEL_TILES.t1 V_EV0 0 V_LV2
+;		TileMapSetAttribute #LID_TERRAIN V_LV0+1 V_LV1 [All] V_LV2
+;		TileMapSetAttribute #LID_TERRAIN V_LV0+1 V_LV1 [FlipHorizontal] 1
+;		
+;		Array2DGetElement LEVEL_TILES.t4 V_EV0 0 V_LV2
+;		TileMapSetAttribute #LID_TERRAIN V_LV0 V_LV1+1 [All] V_LV2
+;		TileMapSetAttribute #LID_TERRAIN V_LV0 V_LV1+1 [FlipHorizontal] 1
+;		
+;		Array2DGetElement LEVEL_TILES.t3 V_EV0 0 V_LV2
+;		TileMapSetAttribute #LID_TERRAIN V_LV0+1 V_LV1+1 [All] V_LV2
+;		TileMapSetAttribute #LID_TERRAIN V_LV0+1 V_LV1+1 [FlipHorizontal] 1
+;	End
+
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Draw any additional joining blocks, based on the type of edge used
+; The last edge (rightmost) of the previous tile is in 'G_LASTJOIN'
+
+Function JoinEdges 3		; 0 - block id, 1 - block height, 2 - flags
+
+	; if height diff to the prev block is more than one, no join to add (down by wall code)
+	V_LV2 = V_EV1
+	V_LV2 -= G_LASTHEIGHT
+
+	If V_LV2 <> -1 1
+		G_LASTJOIN = #TJ_NONE
+	End
+
+	; set x/y coords
+	V_LV2 = 30
+	V_LV3 = 20
+	V_LV3 -= V_EV1*2
+
+	; left edge first (in V_LV1)
+	If V_EV2 == 0
+		Array2DGetElement LEVEL_TILES.join_left V_EV0 0 V_LV0
+		Array2DGetElement LEVEL_TILES.join_right V_EV0 0 V_LV1
+	Else
+		; flipped tile
+		Array2DGetElement LEVEL_TILES.join_right V_EV0 0 V_LV0
+		Array2DGetElement LEVEL_TILES.join_left V_EV0 0 V_LV1
+	End
+
+	; --- compare both edges
+
+	if G_LASTJOIN == #TJ_VERT
+		If V_LV0 == #TJ_HORZ
+
+			; add a vert to horiz join
+			TileMapSetAttribute #LID_TERRAIN V_LV2-1 V_LV3 [All] 19
+			TileMapSetAttribute #LID_TERRAIN V_LV2-1 V_LV3 [FlipHorizontal] true
+
+		ElseIf V_LV0 == #TJ_DIAG_DOWN
+
+			; add a vert to bottom diag join
+			TileMapSetAttribute #LID_TERRAIN V_LV2 V_LV3+2 [All] 23
+			TileMapSetAttribute #LID_TERRAIN V_LV2-1 V_LV3+2 [All] 19
+			TileMapSetAttribute #LID_TERRAIN V_LV2-1 V_LV3+2 [FlipHorizontal] true
+
+		End
+	End
+
+	if G_LASTJOIN == #TJ_HORZ
+		If V_LV0 == #TJ_VERT
+
+			; add a horiz to vert join
+			TileMapSetAttribute #LID_TERRAIN V_LV2 V_LV3+2 [All] 19
+
+		ElseIf V_LV0 == #TJ_DIAG_DOWN
+			; add a horiz to slope join
+			TileMapSetAttribute #LID_TERRAIN V_LV2 V_LV3+2 [All] 24
+		End
+
+	End
+
+	; for slopes
+	if G_LASTJOIN == #TJ_DIAG_UP
+		If V_LV0 == #TJ_DIAG_DOWN
+
+			; add a slope up to slope down join
+			TileMapSetAttribute #LID_TERRAIN V_LV2 V_LV3+2 [All] 24
+
+		ElseIf V_LV0 == #TJ_VERT
+
+			; add a slope up to vert join
+			TileMapSetAttribute #LID_TERRAIN V_LV2 V_LV3+2 [All] 13
+		End
+	End
+
+	if G_LASTJOIN == #TJ_DIAG_DOWN
+		If V_LV0 == #TJ_DIAG_UP
+
+			; add a slope bottom to slope top join
+			TileMapSetAttribute #LID_TERRAIN V_LV2-1 V_LV3 [All] 24
+			TileMapSetAttribute #LID_TERRAIN V_LV2-1 V_LV3 [FlipHorizontal] true
+
+		ElseIf V_LV0 == #TJ_HORZ
+
+			; add a slope down to horiz join
+			TileMapSetAttribute #LID_TERRAIN V_LV2-1 V_LV3 [All] 24
+			TileMapSetAttribute #LID_TERRAIN V_LV2-1 V_LV3 [FlipHorizontal] true
+
+		End
+	End
+
+	; for next draw
+	G_LASTJOIN = V_LV1
+
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; If the height diff between the old and new walls is more than one unit
+; have to draw vertical walls
+;
+
+Function DrawWalls 2		; 0 - new height, 1 - old height
+
+	V_LV0 = V_EV0
+	V_LV0 -= V_EV1
+
+	; no gap, dont draw anything
+	If V_LV0 >=< -1 1
+		Return
+	End
+
+	If V_EV0 > V_EV1
+		; draw down
+		V_EV0 -= 1
+
+		While V_EV0 >= V_EV1+1
+
+			; set x/y coords
+			V_LV0 = 30
+			V_LV1 = 20
+			V_LV1 -= V_EV0*2
+
+			TileMapSetAttribute #LID_TERRAIN V_LV0 V_LV1 [All] 31
+			TileMapSetAttribute #LID_TERRAIN V_LV0 V_LV1+1 [All] 31
+
+			V_EV0 -= 1
+		End
+
+		; finish with a join
+		TileMapSetAttribute #LID_TERRAIN V_LV0 V_LV1+2 [All] 19
+
+	Else
+
+		; start with a join
+		V_LV1 = 20
+		V_LV1 -= V_EV0*2
+		TileMapSetAttribute #LID_TERRAIN 29 V_LV1 [All] 19
+		TileMapSetAttribute #LID_TERRAIN 29 V_LV1 [FlipHorizontal] true
+
+		; draw up
+		V_EV0 += 1
+
+		While V_EV0 <= V_EV1-1
+
+			; set x/y coords
+			V_LV0 = 30
+			V_LV1 = 20
+			V_LV1 -= V_EV0*2
+
+			TileMapSetAttribute #LID_TERRAIN V_LV0-1 V_LV1 [All] 31
+			TileMapSetAttribute #LID_TERRAIN V_LV0-1 V_LV1 [FlipHorizontal] true
+			TileMapSetAttribute #LID_TERRAIN V_LV0-1 V_LV1+1 [All] 31
+			TileMapSetAttribute #LID_TERRAIN V_LV0-1 V_LV1+1 [FlipHorizontal] true
+
+			V_EV0 += 1
+		End
+	End
+
+Return
+
+
+; === include levels  ================================================================
+
+ExternScript "terrain_lvl00.txt"
+
+

@@ -1,0 +1,5 @@
+TableDefine myArray 0	Name	HP	MP	Attack	Defence	
+TableData 		Fighter	30	5	25	20	
+TableData 		Ranger	25	15	18	15	
+TableData 		Wizard	15	30	10	10	
+

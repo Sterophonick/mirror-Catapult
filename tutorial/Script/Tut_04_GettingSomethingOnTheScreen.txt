@@ -1,0 +1,291 @@
+;
+; Tutorial #4 - Getting something on the screen (Vers 2 - 09/02/04)
+;	Written by M.Shamgar
+;
+; This tutorial teaches you : 
+;
+; i. Palette editing basics.
+; ii. Tile editing basics.
+; iii. Setting up TileMap/Layer properties
+; iv. Manipulating tiles at runtime
+; 
+;
+; !!! Note - like all tutorials, none of these changes are permanent. Once the project is closed, all 
+; changes will be lost.. so don't spend too long working on graphics :)
+
+; ------------------------------------------------------------------------------
+; By now we have learnt about functions, what the 'Initialise' function does, how to run/control a project
+; and how to setup the Display.
+;
+; Now, its time to make something appear on the screen! About time isn't it :>
+;
+
+; ------------------------------------------------------------------------------
+; Firstly, make sure we are starting with a clean slate. 
+; Reset the emulator, to make sure no residual settings from a previous project are in effect.
+; (select "Reset Emulator" from the Execute menu).
+; 
+; Note that most of the buttons/controls have tooltips, to help you out if you get stuck.
+
+
+; ------------------------------------------------------------------------------
+; Palette editing:
+;
+; 1. Open the palette viewer (press Control-2, or select "Palettes" from the View menu).
+; 
+; 2. Select "background", as we want to use tiles for now (sprites will come later).
+;
+; Leave the first index (colour 0) as black, this index is always a 'transparent' colour.
+; Any pixel drawn using this colour/index, is NOT displayed... instead the pixel 'under' it shows through.
+;
+; (Note that for ANY keyboard shortcuts to work in any of the viewer windows, you need to 
+; first make that window active).
+;
+; 3. Select colour index 1 by clicking on the 2nd square, top line. The value in the "index" box
+; should read "1". Note that you could also use the cursor keys, or enter an index directly to select 
+; colour 1.
+;
+; 4. Change the colour of this index to a full BLUE. There are a few ways to do this:
+;	a. Double click on the colour index to open a colour 'choose' window. Select a pure blue {31, 0, 0} from there.
+;	b. (or) Enter 31 in the "Blue" edit box (31 is the maximum value for any colour component on the GBA).
+;	c. (or) Use the PageUp/PageDown keys to change the blue component of the selected colour.
+; 
+;	You should see the 2nd colour index change to blue.
+;
+;
+; 5. Follow the same steps (3..4) for the third box (i.e. colour index 2), but this time make it RED. 
+;	(i.e. enter 31 in the "Red" editbox, or use the Insert/Delete keys to change the red component of the colour).
+;
+;
+; You have now setup a simple palette! 
+;
+; In the next section, we will be working with 16 colour tiles. When working in 16 colours, the 256 colour
+; palette is split into 16 sets (also known as BANKS) of 16 colour palettes. The changes just made to the palette, affect the first
+; palette bank (i.e. bank 0).
+; 
+; 6. You can now close the Palette editor window (some shortcuts for this include pressing control-2 again, or
+; pressing ESCAPE once the palette viewer is selected/active. Of course you can just use the mouse to close the window!).
+
+
+; ------------------------------------------------------------------------------
+; Tile Editing:
+;
+; 1. Open the "Tile viewer" window (press Control-4, or select "Tiles" from the 'View' menu).
+;
+; 2. Select tile index 0 (the value in "Current Index" should be 0. If it is not, enter 0 here).
+;
+; 3. Use the "Target" combobox to select "Background", instead of "Sprites". (we are going to edit some background tiles).
+;
+; 4. Use the "Colour" combobox to select "16 colour" (the default setting).
+;
+; 5. Click on the "paintbrush" button. This will open the tile editing window. This window allows you to make changes
+; 	to the currently selected tile (in this case tile 0). Double clicking on any tile in the tile viewer also opens the editor.
+;
+; 6. Open the "Palette Viewer" again. We are going to use this window to choose colours from the palette, to place into 
+; 	the tile we are editing.
+;
+; 7. Click on the blue colour in the palette window. Then paint that colour into tile 0, by holding the left mouse button down
+;	and drawing in the "canvas" region within the "Tile Editor" window. You should see some of the squares that form
+; 	the tile change to a blue colour.
+;
+; 8. Repeat step 7, but this time with the red colour. Draw anything you want in the tile! Try experimenting with some of the
+;	tools in the tile editor (buttons on the left are "Drawing Modes", the buttons at the top are "Change Tools" ).
+;
+; Read the users guide for comprehensive information about tile editing - here are some 
+; useful shortcuts :
+;
+; i. The "Enter" key or right clicking with the mouse will 'get' a colour from a pixel.
+; ii. The "Space" key or left clicking will 'paint' the selected colour into a pixel.
+; iii. The "Space" key will also automatically advance in the direction last moved.
+; iv. The cursor keys can be used to move around.
+
+; 9. Repeat steps 7..8, but select tile index 1 first (within the "Tile Viewer" window). This the tile immediately to the right
+;	of the tile just changed. When the "Tile Viewer" window is selected, you can use the [, ] buttons to select the previous
+;	or next tile. Draw any pattern in Tile1, but make it different from the pattern in Tile 0 (so you can tell the difference!).
+;
+; 10. Close the Palette Viewer and Tile Viewer windows (the Tile Editor window will close automatically).
+
+
+; ------------------------------------------------------------------------------
+; Setting up TileMap/Layer properties
+;
+; 1. Below is a script that will initialise the display, and activate background 0 (i.e. tilemap layer 0).
+; 	Read the Initialise function, then return here (try to understand what it does).
+;
+; 2. Run the project, then stop it again.
+; 	Wow, what is that on the display? A garbled mess?
+; 	This occurs because the TileMap for layer 0, is using the same memory as the tiles you just drew!
+;
+;	Every background layer has a TileMap. The TileMap determines which tiles composite the overall image
+;	which is the background itself. (think of it like a Jigsaw puzzle.. the tiles are the actual pieces of the puzzle
+;	and the TileMap determines where each piece goes!).
+;
+; 	Having the TileMap use the same memory as the Tiles is not very useful!!. If you were to change the 
+;	TileMap now, it would corrupt your tiles (and visa-versa). 
+;
+;	If you want, you could open the TileMap Viewer to examine the current Tilemap (select "Tilemaps" from the View menu).
+;
+; We need to make this TileMap use memory elsewhere.
+;
+; 3. Add the following line to the Initialise function (can be added anywhere in the function):
+;
+; 	TileMapSetMapBank 0 31 		; make sure you remove the semicolon at the front!
+;
+; Background tiles have 64k of memory available for both tiles and tilemaps to share. 
+;
+; TileMaps use memory in sets of 2k. Since there is 64k of memory available for use, there
+; are 32 blocks of memory (or BANKS) available for use. 0 is the first bank (0..2k), 31 is the bank (62..64k).
+; 
+;
+; 4. Run the project, then stop it.
+;
+; 	Do you see a screen full of your first tile? You should have!
+;	This is because the memory at bank 31 just contains zeros, which is the index of your first tile!
+;
+; 	Lets make the screen go blank/black again.
+; 
+;
+; 5. Copy the following line into the BODY part of the script, below the *** :
+;
+; 	TileMapFillRect 0 [All] 0 0 32 32 2		; make sure you remove the semicolon at the front!
+;
+; This command fills background/tilemap 0 from 0,0 to 31,31 (i.e. the entire tilemap) with index 2.
+; Tile index 2 is the first blank/empty tile (the first blank index - only tiles 0, 1 were edited). 
+;
+; (remember to right click on any command, and choose "Help" if you want more information..!)
+;
+; 	Note that the 32,32 are the width/height to fill. 32x32 is the default size of a TileMap (and is the smallest
+;	size that covers the entire GBA screen - which is 30x20 tiles in size).
+;
+; 	The [All] means all attributes are changed. 
+;	A Tilemap has 4 attributes - tile index, h/v flip flags, and a palette bank index. 
+;	(we will look more into these later!).
+;
+;
+; 6.  Run the project, then stop it (or just single step execute the project)
+;
+; You should have a blank screen again!
+;
+; Lets draw two rectangles into the TileMap, each filled with one of the tiles created. Add the following lines to the
+; script, below where the previous line was added:
+;
+; 	TileMapFillRect 0 [All] 5 5 8 8 0		; make sure you remove the semicolon at the front!
+; 	TileMapFillRect 0 [All] 10 10 8 8 1
+;
+;
+; This does a similar thing to the previous TileMapFillRect command.. except it doesn't cover the entire
+; screen. The first command fills the region with tile 0 (i.e. the 0 at the very end), the 2nd command uses
+; tile index 1.
+;
+; 7.  Run the project, then stop it (again!). You should now see two rectangles appear on the screen.
+;
+; Well done, you are almost there! :)
+;
+; As always, feel free to tinker with the values used by the FillRect commands.. see what sort of effects
+; you can get working.
+
+
+
+; ------------------------------------------------------------------------------
+; Manipulating Tiles at runtime
+;
+; We have two blocky rectangles on the screen.. still not very interesting. 
+; Lets make them do something interesting..!!
+; 
+; Firstly, lets add some palette colour cycling. If a palette colour changes at runtime
+; any pixel on the screen that uses this colour index also changes. This is very useful!!
+;
+; 1. Add the following command to the script body:
+;
+;	PaletteCycle [bg] 1 3		; make sure you remove the semicolon at the front!
+;
+; 	The [bg] refers to background palette colours.
+;	The 1..3 determines the range to cycle between (in this case colour 1, 2 & 3 will all cycle!).
+;
+;
+; 2. Run the project:
+;
+; What the? What is going on now?
+;
+; 	To find out:
+;	i. Stop the project executing
+;	ii. Open the Palette Viewer
+;	iii. Single step execute the project, watching the palette viewer.
+;
+; The colours in palette indices 1, 2, 3 are cycling around.
+;
+; The direction of the cycle, is determined by which palette index value comes first. 
+; Try swapping the '3' and '1' around, i.e. :
+;
+; 	PaletteCycle [bg] 3 1
+; 
+; And single step a few times.. the direction of the colour movement will have changed!
+;
+;
+; ------------------------------------------------------------------------------
+; The last thing we will do in this tutorial before we move on to more advanced tile topics, 
+; is cycling Tile data (instead of palette data!).
+;
+; 3. Add this command to the script body:
+;
+; 	TileDataCycleRect [bg] [up] 0 0 2 0 1 0 0 0 0 	; make sure you remove the semicolon at the front!
+; 
+; ...and comment out the palette cycle command (so we can see what is going on more
+; accurately). 
+;
+; To do this, add a semicolon to the start of the line that contains the PaletteCycle command.
+; 
+; 4. Run the project again. 
+;
+; 	Use the Tile Viewer to better see what is happening. Stop the project from executing, open the 
+;	Tile viewer window, and single execute the project a few times.
+;
+;	The tile data itself is now cycling!!
+;
+;	If you are interested, refer to the users guide about what all the parameters are doing.
+;
+
+
+; ------------------------------------------------------------------------------
+; You have now completed this tutorial, and should understand a little more about Tiles & TileMaps.
+;
+;
+; If you want to tinker with this script:
+;
+; - try changing some of the CycleRect params
+; - try editing your tiles, while the script is running
+; - try changing your palette colours, while the script is running
+; - try changing the fill rect regions, while the script is running
+;
+
+
+;
+; Then its time to move onto tutorial 5, where we examine tilemaps in more detail,
+; setup multiple backgrounds, and pixel move backgrounds.
+
+
+
+; ---- Script starts here!!! ----------------------------------------------------------------------------------------------------------------------
+
+; main script BODY starts here
+
+; ***
+; all commands must be inserted ABOVE this
+Return
+
+; main script BODY ends here
+
+
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Initialise the display mode
+; 
+
+Function Initialise 0
+
+	DisplaySetAttribute [BlankDisplay] false		; make the display appear
+	DisplaySetAttribute [EnableBG0] true			; enable tile background 0
+
+Return
+
+; end of script

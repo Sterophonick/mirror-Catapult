@@ -1,0 +1,35 @@
+;;; Catapult macro script file - automatically generated
+;;; any changes made by hand will be lost
+
+
+#SPRITE_OFF
+?Turn sprite off (P1 = sprite index)
+$SpriteSetAttribute %0 [RotScale] 0
+$SpriteSetAttribute %0 [SdFold] 1
+$
+
+#SPRITE_ON
+?Turn sprite on (P1 = sprite index)
+$SpriteSetAttribute %0 [RotScale] 0
+$SpriteSetAttribute %0 [SdFold] 0
+$
+$
+
+#SPRITE_SETPOS
+?
+$SpriteSetAttribute %0 [Xpos] %1
+$SpriteSetAttribute %0 [Ypos] %2
+$
+$
+
+#SPRITESIZE_32
+?
+$SpriteSetAttribute %0 [SizeTop] 0
+$SpriteSetAttribute %0 [SizeBottom] 2
+$
+$
+
+#TILECYCLE
+?
+$TileDataCycleRect %0 [left] %1 0 1 1 1 0 0 0 0
+

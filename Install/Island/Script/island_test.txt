@@ -1,0 +1,374 @@
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; $Source: N:\\REPOS/Current/Code/Catapult/CatapultExportByteCode.cpp,v $
+; $Date: 2003/04/10 03:59:21 $
+; $Revision: 1.40 $ 
+; 
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+; Island Demo - 10/04/03
+;
+; Updated Island demo, for the freeware version of Catapult.
+; All rights reserved, Nocturnal Entertainment Australia
+;
+; Written by Michael Shamgar
+; Improved art by Enrique Giersch
+; Music written by Andy Hawkins - all music are MOD files, with up to 8 channels (4 in game best)
+
+; This is a publically available demo, and may be used for any purpose :)
+; 
+; Simple island/balloon demo. Some animating water (tile animation), island shape (tilemap),
+; lava (palette cycling), moving/animating 'hot air balloons' sprites
+;
+
+; Controls :
+;
+; Use the arrow keys (default) to move the human balloon. 
+; Hold the shoulderLeft button (PageUp) while the arrow keys to scroll the map
+; 
+
+; === Definitions ======================================================================================
+
+; sprite indexes
+##SID_AI_BALLOON 		0
+##SID_PLAYER_BALLOON 	2
+
+; tile indexes
+; (background tiles)
+##TID_EMPTY				0
+##TID_WATER				1
+##TID_SAND				2
+##TID_ISLAND				3
+##TID_LAVA				16
+
+; (sprite tiles)
+##TID_BALLOON			0
+##TID_SHADOW			32
+
+; tilemap layers
+##MID_ISLAND			0
+##MID_WATER			1
+##MID_OCEAN_FLOOR		2
+
+; === Functions ======================================================================================
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Start of the main script
+; 
+
+	; --- cycle water (tile)
+	IF G_TICKS&15 == 0
+		TileDataCycleRect [bg] [up] 0 1 1 1 1 0 0 0 0
+	END
+	
+	; --- cycle lava (palette) - once every 4 frames
+	if G_TICKS&7 == 0
+		PaletteCycle [bg] 8 11
+	End
+	
+	; --- handle input (move player balloons / scroll screen)
+	Call ProcessMovement
+	
+	; ---- update balloon positions, and move sprites
+	Call UpdateAIBalloon								; return AI balloon y position, in RV0
+	
+	; --- update the sprite layers (make the bottom most balloon render last)
+	; pass the 
+	Call UpdateSpriteLayers V_RV0 G_BALLOON_Y
+	
+Return
+; end of main script
+
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Background hblank handler - make the sea ripple and move.
+; 
+; This is called at the end of every horizontal rendered line. The
+; parameter passed into the function, is the Y value of the line
+; rendered. 
+; In this case, we start with a flat repeating tile pattern - but
+; but varying each lines X offset based on the line number and
+; time, we get a really nice wave type effect.   
+; 
+
+Function HBlankCB 1	; line id
+
+	V_EV0 += G_TICKS								; add time to horizontal line Y value
+	V_EV0 += G_SCREEN_YPOS						; add world y offset to to y value (otherwise scrolling up/down looks strange)
+	V_EV0 >>= 2									; slow down the effect of time and the Y value (by a factor of 4)
+	V_EV0 Bounce V_EV0 15 						; use the bounce command to generate a nice wave pattern from the value
+	V_EV0 += G_SCREEN_XPOS						; add the current x offset (otherwise scrolling the screen left/right looks wrong)
+	V_EV0 &= 255 									; clip offset to inside the tile map boundary
+	
+	TileMapSetOffsetX #MID_WATER V_EV0			; set the offset
+
+Return
+
+; ------------------------------------------------------------------------------------------------------
+; Scroll either the screen, or move a balloon, based on input
+;
+
+Function ProcessMovement 0
+
+	V_LV0 = 0
+	V_LV1 = 0
+	
+	; left
+	If F_IsButtonHeldPadLeft == 1
+		V_LV0  += -1
+	End
+	
+	; right
+	If F_IsButtonHeldPadRight == 1
+		V_LV0  += 1
+	End
+	
+	; up
+	If F_IsButtonHeldPadUp == 1
+		V_LV1  += -1
+	End
+	
+	; down
+	If F_IsButtonHeldPadDown == 1
+		V_LV1  += 1
+	End
+	
+	; If ShoulderButton is down, scroll screen - otherwise move balloon
+	If F_IsButtonHeldShoulderLeft == 1
+		G_SCREEN_XPOS += V_LV0
+		G_SCREEN_YPOS += V_LV1
+
+		; update tilemap offsets
+		TileMapSetOffsetX #MID_ISLAND G_SCREEN_XPOS
+		TileMapSetOffsetY #MID_ISLAND G_SCREEN_YPOS
+
+		TileMapSetOffsetX #MID_OCEAN_FLOOR G_SCREEN_XPOS
+		TileMapSetOffsetY #MID_OCEAN_FLOOR G_SCREEN_YPOS
+
+		TileMapSetOffsetX #MID_WATER G_SCREEN_XPOS
+		TileMapSetOffsetY #MID_WATER G_SCREEN_YPOS
+	Else
+		; wrap the balloon around the screen
+		G_BALLOON_X += V_LV0
+		G_BALLOON_X &= 511
+
+		G_BALLOON_Y += V_LV1
+		G_BALLOON_Y &= 255
+
+		; update position of human balloon
+		Call UpdateBalloonPosition #SID_PLAYER_BALLOON G_BALLOON_X G_BALLOON_Y
+	End
+
+Return
+
+; ------------------------------------------------------------------------------------------------------
+; Move this AI balloon around, by following the path
+; set down for it. Return the y position of the balloon
+; so it can be used for sorting render orders.
+; 
+
+Function UpdateAIBalloon 0
+
+	; loop around path continuously
+	PathGetLength BALLOON_PATH V_LV1
+
+	V_LV0 = G_TICKS
+	V_LV0 %= V_LV1
+
+	; get position from path
+	PathGetPos BALLOON_PATH V_LV0 V_LV0 V_LV1
+
+	; add screen offset
+	V_LV0 -= G_SCREEN_XPOS
+	V_LV1 -= G_SCREEN_YPOS
+	
+	; move AI sprite
+	Call UpdateBalloonPosition #SID_AI_BALLOON V_LV0 V_LV1
+
+Return V_LV1
+
+; ------------------------------------------------------------------------------------------------------
+; Update the sprite layers, sorting by position
+; 
+
+Function UpdateSpriteLayers 2
+
+	; Adjust sprite layers, to make the bottom most balloon render last
+	If V_EV0 > V_EV1
+		; AI balloon on bottom
+		SpriteSetAttribute #SID_AI_BALLOON [RenderLayer] 0
+		SpriteSetAttribute #SID_AI_BALLOON+1 [RenderLayer] 0
+	
+		; Human on top
+		SpriteSetAttribute #SID_PLAYER_BALLOON [RenderLayer] 1
+		SpriteSetAttribute #SID_PLAYER_BALLOON+1 [RenderLayer] 1
+	Else
+		; reversed
+		; AI balloon on bottom
+		SpriteSetAttribute #SID_AI_BALLOON [RenderLayer] 1
+		SpriteSetAttribute #SID_AI_BALLOON+1 [RenderLayer] 1
+	
+		; Human on top
+		SpriteSetAttribute #SID_PLAYER_BALLOON [RenderLayer] 0
+		SpriteSetAttribute #SID_PLAYER_BALLOON+1 [RenderLayer] 0
+	End
+
+Return
+
+; ------------------------------------------------------------------------------------------------------
+; Setup the given balloon sprite
+; Uses sprite index+1 a shadow
+;
+
+Function SetupBalloonSprite 1
+
+	; sprite for balloon
+	%SPRITE_ON V_EV0									; Press control-M to access macros. 
+	%SPRITESIZE_32 V_EV0								; A macro is just a series of commands in one statement.
+	SpriteSetAttribute V_EV0 [ColourMode] 0
+	SpriteSetAttribute V_EV0 [PaletteIndex] 0
+	SpriteSetAttribute V_EV0 [TileIndex] 0
+	
+	; sprite for shadow
+	%SPRITE_ON V_EV0+1
+	SpriteSetAttribute V_EV0+1 [SizeTop] 0
+	SpriteSetAttribute V_EV0+1 [SizeBottom] 2		; size 16x8
+	SpriteSetAttribute V_EV0+1 [ColourMode] 0
+	SpriteSetAttribute V_EV0+1 [PaletteIndex] 1
+	SpriteSetAttribute V_EV0+1 [TileIndex] 32
+	
+Return
+
+; ------------------------------------------------------------------------------------------------------
+; Update the position of the given balloon (sprites)
+; Takes sprite index, x, y position
+;
+
+Function UpdateBalloonPosition 3
+
+	; clip positions to within range
+	V_EV1 &= 511
+	V_EV2 &= 255
+	; move balloon
+	%SPRITE_SETPOS V_EV0 V_EV1 V_EV2
+
+	; move shadow
+	V_EV1 += 7
+	V_EV1 &= 511
+	V_EV2 += 40
+	V_EV2 &= 255
+	%SPRITE_SETPOS V_EV0+1 V_EV1 V_EV2
+
+Return
+
+; ------------------------------------------------------------------------------------------------------
+; Initialise the display & sprites
+;
+
+Function Initialise 0
+
+	; ---general display init
+	%DISPLAY_INIT				; Press control-M to view the code in this macro
+
+	; setup which layers are visible/enabled
+	DisplaySetAttribute [EnableBG0] true
+	DisplaySetAttribute [EnableBG1] true
+	DisplaySetAttribute [EnableBG2] true
+	DisplaySetAttribute [EnableBG3] false
+
+	TileMapSetOffsetX 0 0
+	TileMapSetOffsetY 0 0
+	TileMapSetOffsetX 1 0
+	TileMapSetOffsetY 1 0
+	TileMapSetOffsetX 2 0
+	TileMapSetOffsetY 2 0
+
+	; all tilemaps are 32x32 tiles in size
+	TileMapSetSize 0 0
+	TileMapSetSize 1 0
+	TileMapSetSize 2 0
+	TileMapSetSize 3 0
+	
+	; make tilemaps use memory AWAY from tiledata
+	TileMapSetMapBank 0 31
+	TileMapSetMapBank 1 30
+	TileMapSetMapBank 2 29
+	TileMapSetMapBank 3 28
+
+	; ensure tilemaps have the right data bank setup
+	TileMapSetTileBank 0 0
+	TileMapSetTileBank 1 0
+	TileMapSetTileBank 2 0
+	TileMapSetTileBank 3 0
+	
+	; ensure tilemaps are set to 16 colour
+	TileMapSetColourMode 0 #_COL_16
+	TileMapSetColourMode 1 #_COL_16
+	TileMapSetColourMode 2 #_COL_16
+	TileMapSetColourMode 3 #_COL_16
+	
+	;;; load tiles & palettes
+
+	; blank tile at zero
+	TileDataFillTiles [bg] 0 #TID_EMPTY 1 0
+	
+	; water tile & palette into slot 0
+	TileDataLoad [bg] RID_TILE_WATER #TID_WATER 0
+	PaletteLoad [bg] RID_PAL_WATER 0
+	
+	; sand tile 2 & palette into slot 1
+	TileDataLoad [bg] RID_TILE_SAND #TID_SAND 0
+	PaletteLoad [bg] RID_PAL_SAND 1
+	
+	; and other tiles (no extra palettes)
+	TileDataLoad [bg] RID_TILE_ISLAND #TID_ISLAND 0
+	TileDataLoad [bg] RID_TILE_LAVA #TID_LAVA 0
+	
+	;;; load balloon/shadows sprite tiles & palette
+	TileDataLoad [sprite] RID_TILES_BALLOON #TID_BALLOON 0
+	TileDataLoad [sprite] RID_TILES_BALLOON_SHADOW #TID_SHADOW 0
+	PaletteLoad [sprite] RID_PAL_BALLOON 0
+	
+	;;; fill layer with water
+	TileMapFillRect #MID_WATER [all] 0 0 32 32 #TID_WATER
+	
+	;;; load island into tilemap
+	TileMapLoad #MID_ISLAND RID_MAP_ISLAND 0 0
+	
+	;;; load ocean floor into tilemap
+	TileMapLoad #MID_OCEAN_FLOOR RID_MAP_OCEAN_FLOOR 0 0
+	
+	;;; setup Island appear on top of water - both below the sprites
+	;;; setup water to appear on top of ocean floor (needed for alpha blending)
+	TileMapSetPriority #MID_ISLAND 2
+	TileMapSetPriority #MID_OCEAN_FLOOR 3
+	TileMapSetPriority #MID_WATER 3
+	
+	; --- alpha blend the water above the ocean floor layer
+	DisplaySetBlendAlphaLevel 12 4				; 50/50 alpha blend between layers
+	DisplaySetBlendMode 1						; set blend mode to alpha
+
+	DisplaySetBlendAttribute [BG0Source] false		; water is the source blend layer
+	DisplaySetBlendAttribute [BG0Target] false
+	
+	DisplaySetBlendAttribute [BG1Source] true		; water is the source blend layer
+	DisplaySetBlendAttribute [BG1Target] 0	
+
+	DisplaySetBlendAttribute [BG2Source] false
+	DisplaySetBlendAttribute [BG2Target] true		; ocean floor is the target blend layer
+	
+	;;; setup initial screen position
+	G_SCREEN_XPOS = 0
+	G_SCREEN_YPOS = 0
+	
+	; initial position of human balloon
+	G_BALLOON_X = 0
+	G_BALLOON_Y = 0
+	
+	;;; Initialise 2 balloons - one for AI, one for human
+	Call SetupBalloonSprite #SID_AI_BALLOON
+	Call SetupBalloonSprite #SID_PLAYER_BALLOON
+
+	; start music
+	MusicPlay RID_MUSIC_DEMO
+		
+Return

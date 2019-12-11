@@ -1,0 +1,912 @@
+;_________________________________________________
+;HIGHWAY DEMO 2
+;Programmed by Roger Levy rlevy@nocturnal-central.com
+;Illustrated by David Hellman dhellman@mica.edu
+;*****************************************************************
+;
+; Demonstrates:
+;  - Custom Object Oriented system:
+;          (Features: collision detection, animation, velocity control, sprite parameter control, and more; press CTRL-A to observe the core object array)
+;  - Implementation of Tilelists (press CTRL-N to edit tilelists)
+;  - Implementation of Levels (press CTRL-L to edit levels)
+
+;Controls:
+; Up/Down/Left/Right - Control horse
+; A - hold to charge sword, release to unleash attack
+; Select - Toggle God mode (invulnerability) - by default, If your horse touches anything, you die! :)
+; Start - Start game over
+; L - Stop music
+; R - Play music (placeholder song)
+; Bonus points for killing more than one ghost in a single blow
+
+
+;Constants
+##layer_foreground 0
+##layer_action 1
+##layer_background1 2
+##layer_background2 3
+
+##total_objects 128
+##death_pause 15
+
+##palindex_superpipe 1
+##palindex_pipe 0
+
+;External scripts
+externscript	"data.txt"
+externscript	"bg_layout.txt"
+externscript	"sprite_layout.txt"
+
+;External functions
+externfunction "objects.txt" ClearObjects
+
+externfunction "display.txt" InitScreen
+externfunction "display.txt" Render
+externfunction "display.txt" ClearScreen
+externfunction "display.txt" ClearSprites
+externfunction "display.txt" BlankDisplay
+externfunction "display.txt" TransformXY
+externfunction "display.txt" GetPixelXY
+externfunction "display.txt" ProcessCamera
+externfunction "display.txt" DrawBackground
+
+
+;externfunction "game.txt" ProcessObjects
+;externfunction "game.txt" AddObject
+;externfunction "game.txt" CreateClassObject
+
+;Main Loop
+;---------------------
+
+	call g_function
+
+	return	
+
+function MainEngine 0
+	call Render
+	call GameControl
+	call GenerateGhosts g_ghostrate
+	;call ControlCamera
+	;call CycleTileGraphics 
+	call ProcessObjects
+	call ProcessCamera	
+	call CheckForNextSection
+	return
+
+function SetDeathState 0
+	g_function = PauseFunction
+	g_counter = 0
+	call BlankDisplay
+	return
+
+function DeathFunction 0
+	if g_deathwind >=< 2 #death_pause 
+	else
+		if g_deathwind &= 1
+			call MainEngine
+		end
+		if g_deathwind > 160
+			call SetDeathState
+		end
+	end
+	g_deathwind += 1
+	return
+
+function PauseFunction 0
+	if g_counter == 25
+		call Initialise
+	end
+	g_counter += 1
+	return
+
+function Initialise 0
+	
+	;Init Globals
+	g_lives = 5
+	g_total = 0
+	g_section = 0
+	g_score = 0
+	g_billboard = 1
+	g_hadoken_length = 20
+	g_deathtoggle = true
+	g_function = MainEngine
+	
+	call InitScreen	
+	call ClearScreen
+	
+	
+	;load Background Data
+	ResourceSetIndex 0
+	tilelistGroupLoad tilelist_bg2 [bg] 0 0    			;Load basic tiles
+	tilelistGroupLoad tilelist_bg2 [bg] 1 0    			;Load basic tiles
+	
+	
+	paletteLoad [bg] palette_highway2_set01 0		;Load palette (bg)	
+	paletteLoad [bg] palette_highway2_set02 1		;Load palette 1
+	paletteLoad [bg] palette_highway3_set01 2		;Load palette 2	
+	paletteLoad [bg] palette_highway3_set02 3		;Load palette 3
+	paletteLoad [bg] palette_highway4 4			;Load palette 4
+	paletteLoad [bg] palette_billboard 5			;Load palette 5
+	
+	tilelistCopyAttribToCollide tilelist_bg2 0 1 0 0		;copy attribute data to collision array
+	tilelistCopyAttribToCollide tilelist_bg2 1 1 0 0		;copy attribute data to collision array
+	;load Sprite Data
+	tilelistGroupLoad tilelist_spr [sprite] 0 0    		;Load basic tiles
+	;paletteLoad [sprite] palette_highway_layer1 0	;Load palette 0
+	paletteLoad [sprite] palette_horse 1			;Load palette 1
+	paletteLoad [sprite] palette_slash 2			;Load palette 2
+	paletteLoad [sprite] palette_smallexplode 3		;Load palette 3
+	paletteLoad [sprite] palette_ghost 4			;Load palette 4
+	paletteLoad [sprite] palette_sillhouette 5		;Load palette 5
+	paletteLoad [sprite] palette_hadoken 6			;Load palette 6
+	paletteLoad [sprite] palette_superslash 7		;Load palette 7
+	paletteLoad [sprite] palette_horse_superslash 8	;Load palette 8
+	call ClearObjects	
+
+	; set font colour	
+	palettesetcolour [bg] 28 {2,31,2}
+	
+ 	
+	;call AddObject 0 16*16 512*16				;Spawn main character
+	call AddObject 0 32*16 512*16				;Spawn main character
+	g_player = r0
+	;Init Camera
+	;camera.posx = 0
+	camera.posx = object.posx[g_player]
+	camera.posx -= 32*16
+	camera.posy = object.posy[g_player]
+	camera.posy -= 64*16
+	camera.oldx = camera.posx
+	camera.oldy = camera.posy
+	camera.vx = 16
+	camera.vy = 0
+	l0 = camera.posx
+	l0 >>= 4
+	l1 = camera.posy
+	l1 >>= 4
+	LevelSetPos stagedata.fg1[g_stage] #layer_action l0 l1 0
+	call ProcessSection g_section
+	
+	call DrawBackground	
+	
+	MusicPlay song_bach
+	displaysetAttribute [BlankDisplay] 0	;Enable display
+	return
+
+
+
+
+
+
+
+
+;Game functions
+;--------------
+function GenerateGhosts 1
+;p0 = rate of occurance (0...100)
+	if g_ghostcounter == 3
+	
+		l0 ?= 100
+		if l0 < p0
+			;l0 = topmost y coord where ghost may spawn
+			l0 = camera.posy  
+			l0 -= 64*16
+			l1 ?= 288*16
+			l0 += l1
+			
+			l1 = camera.posx
+			l1 += 240*16
+			call AddObject g_ghosttype l1 l0
+		end	
+		g_ghostcounter = 0
+	end
+	g_ghostcounter += 1
+	return	
+	
+function GameControl 0
+	if F_IsButtonPressedStart == true
+		call Initialise
+	end
+	
+	if F_IsButtonPressedSelect == true
+		g_deathtoggle ^= -1
+	end
+	if F_IsButtonPressedShoulderLeft == true
+		MusicStop
+	end
+	if F_IsButtonPressedShoulderRight == true
+		MusicPlay song_bach
+	end
+
+	return
+
+function CheckForNextSection 0
+	if camera.posx > sectiondata.x[g_section+1]
+		g_section += 1
+		call ProcessSection g_section
+	end
+	return
+
+function ProcessSection 1
+;p0 = section #
+	if sectiondata.hardmode[p0] != -1
+		g_hardmode = sectiondata.hardmode[p0]
+	end	
+
+	if sectiondata.ghostrate[p0] != -1
+		g_ghostrate = sectiondata.ghostrate[p0]
+	end	
+	if sectiondata.ghosttype[p0] != -1
+		g_ghosttype = sectiondata.ghosttype[p0]
+	end	
+
+	if sectiondata.foreground[p0] != -1
+		TileMapLoad #layer_foreground sectiondata.foreground[p0] 32 0
+		;g_foreground = sectiondata.foreground[p0] 
+	end
+	call CreateClassObject sectiondata.encounter[p0] 
+	return
+
+
+
+;========================================================================================================================================
+externfunction "display.txt" ClearSprite
+
+externfunction "objects.txt" PlayAnimation
+externfunction "objects.txt" AnimateObject
+externfunction "objects.txt" GetFrameData
+externfunction "objects.txt" SetFrame
+externfunction "objects.txt" MoveObject
+externfunction "objects.txt" AdhereObject
+externfunction "objects.txt" TestObjectToObjectCollision 
+externfunction "objects.txt" SetObjectPal
+
+;Object Engine 
+;--------------
+
+
+function ProcessObjects 0
+
+	g_me = 0
+	array1dfind g_me #total_objects-1 object.type != -1 g_me
+	while g_me != -1
+			;if object.flags[g_me] &= #flag_new
+			;else
+				call ProcessObject 
+			;end
+		array1dfind g_me+1 0 object.type != -1 g_me
+	end
+	return
+
+function ProcessObject 0
+;g_me = current object
+	object.flags[g_me] &= #mask_animloop
+	
+	;Animate Object	
+	if object.flags[g_me] &= #flag_animate
+		call AnimateObject
+	else
+		call GetFrameData g_me object.frame[g_me]
+	end		
+	
+	;Move Object
+	if object.flags[g_me] &= #flag_ghost
+		object.posx[g_me] += object.vx[g_me]
+		object.posy[g_me] += object.vy[g_me]
+	else
+		call MoveObject
+	end
+	
+	;Object Logic
+	call  object.method[g_me]
+	return
+	
+function CreateClassObject 1
+;p0 = object class
+;returns: r0 = object # (-1 = failed)
+	if p0 == -1
+		return
+	end
+	if g_total < #total_objects
+		call AllocateObject
+		l0 = r0
+		if r0 != -1
+			call ApplyClass r0 p0 
+			g_total += 1
+		end
+	end
+	return l0
+
+function AddObject 3
+;p0 = object class, p1 = x, p2 = y
+;returns: r0 = object # (-1 = failed)
+	if p0 == -1
+		return
+	end
+	if g_total < #total_objects
+		call AllocateObject
+		l0 = r0
+		if r0 != -1
+			object.posx[r0] = p1
+			object.posy[r0] = p2
+			call ApplyClass r0 p0 
+			g_total += 1
+		end
+	end
+
+
+	;call CreateClassObject p0 
+	return l0
+	
+
+function AllocateObject 0
+;returns r0 = object # allocated (-1 = none found)
+	Array1DFind 0 #total_objects-1 object.type == -1 l0
+	return l0	
+
+	
+function ApplyClass 2
+;p0 = object #, p1 = object class 
+	;Copy class info
+	object.type[p0] = class.type[p1]
+	call SetObjectPal p0 class.sprpal[p1]
+	;object.sprpal[p0] = class.sprpal[p1]
+	object.method[p0] = class.method[p1]
+	object.flags[p0] = class.flags[p1]
+	;Copy hit box info
+	object.hitx[p0] = class.hitx[p1]	
+	object.hity[p0] = class.hity[p1]
+	object.hitw[p0] = class.hitw[p1]
+	object.hith[p0] = class.hith[p1]
+	
+	object.vx[p0] = 0
+	object.vy[p0] = 0
+	
+	if class.anim[p1] != -1	
+		call PlayAnimation p0 class.anim[p1]
+	else
+		;if class anim = -1, use frame
+		call SetFrame p0 class.frame[p1]
+		
+	end
+	l0 = g_me
+	g_me = p0
+	call class.initfunc[p1]
+	g_me = l0
+
+	;if object.flags[p0] &= #flag_hide
+	;	return
+	;end
+	spritesetattribute p0 [RenderLayer] 1
+	return
+
+
+function DeleteObject 1
+;p0 = object #
+	object.type[p0] = -1
+	g_total -= 1
+	call ClearSprite p0
+	return
+
+;===========================================================================================================================================
+
+; Object Data 
+; ---------------
+;Types
+##horse 		0
+##slash 		1
+##enemy		2
+##explosion	3
+##piece		100
+
+;Object flags
+##flag_animate 		0x0001
+##flag_transparent		0x0002
+##flag_dynamic		0x0004
+##flag_flipv			0x0008
+##flag_fliph			0x0010
+##flag_flash			0x0020
+##flag_enablerot		0x0040
+##flag_hide			0x0080
+
+##flag_new 			0x8000
+##mask_new 			0x7FFF
+##flag_animloop		0x4000
+##mask_animloop		0xBFFF
+##flag_ghost			0x2000
+##mask_ghost			0xDFFF
+##flag_important		0x1000
+
+
+;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+TableDefine class 0	type			initfunc			method			sprpal	hitx	hity	hitw	hith	flags	anim 				frame
+##class_horse #_here
+TableData			#horse		init_horse		method_horse_idle	1		12	30	24	24	0x1005	#anim_horse_idle		-1
+##class_slash #_here
+TableData			#slash		init_slash		method_slash		2		0	0	32	64	0x2001	#anim_slash			-1
+##class_ghost #_here
+TableData			#enemy		init_ghost		method_ghost		4		4	4	24	24	0x2001	#anim_ghost			-1
+##class_wavyghost #_here
+TableData			#enemy		init_wavyghost	method_wavyghost	4		4	4	24	24	0x2001	#anim_ghost			-1
+
+##class_explosion #_here
+TableData			#explosion	init_explosion		method_explosion	3		0	0	0	0	0x2001	#anim_explosion		-1
+##class_deathpiece #_here
+TableData			#piece		init_deathpiece	method_deathpiece	1		0	0	0	0	0xA080	-1					#index_hat
+##class_pipefragment #_here
+TableData			#piece		init_fragment		method_fragment	2		0	0	0	0	0x2000	-1					#index_pipefragment
+##class_hadoken #_here
+TableData			#slash		init_hadoken		method_hadoken	6		16	0	32	64	0x2003	#anim_hadoken		-1
+
+;------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+;Object Methods
+;-------------
+
+;Fragment Methods
+function init_fragment 0
+	object.counter[g_me] ?= 50	
+		
+	;(vx is set in BreakLevel routine)
+	;l0 ?= 4
+	;l0 += 48
+	;object.vx[g_me] = l0
+	l0 ?= 40
+	l0 *= -1
+	l0 -= 16	
+	object.vy[g_me] += l0
+	return
+
+function method_fragment 0
+	object.vy[g_me] += 2
+
+	if object.counter[g_me] > 0
+		object.counter[g_me] -= 1
+	else	
+		call DeleteObject g_me
+		return
+	end
+	
+	if object.counter[g_me] <= 10
+		object.flags[g_me] |= #flag_transparent
+	end
+	return
+
+;Falling Death Piece Methods
+function init_deathpiece 0
+	return
+	
+function method_deathpiece 0
+	if g_deathwind == 1
+		object.flags[g_me] &= -1-#flag_hide
+	end
+
+	;if object.type[g_me] == 0			; if no wind resistance
+		if g_deathwind > 45
+			if object.vx[g_me] > object.type[g_me]
+				object.vx[g_me] -= 2
+			end
+		end
+	;end
+	if object.vy[g_me] < 50
+		object.vy[g_me] += 1
+	end
+	
+	return
+
+function GenerateDeathPieces 0
+	l0 = 0
+
+	;get player "display" position
+	l1 = object.posx[g_player]
+	l2 = object.hitx[g_player]
+	l2 <<= 4
+	l1 -= l2
+	l2 = object.posy[g_player]
+	l3 = object.hity[g_player]
+	l3 <<= 4
+	l2 -= l3
+	
+	while l0 < #total_deathpieces
+		call AddObject #class_deathpiece l1 l2
+		object.posx[r0] += deathpiece.ofsx[l0]
+		object.posy[r0] += deathpiece.ofsy[l0]
+		object.vx[r0] = deathpiece.vx[l0]
+		object.vy[r0] = deathpiece.vy[l0]
+		object.type[r0] = deathpiece.windresistance[l0]
+		call SetFrame r0 deathpiece.frame[l0]
+		;spritesetattribute r0 [RenderLayer] 1
+
+		l0 += 1
+	end	
+	return
+
+
+;Explosion Methods
+function init_explosion 0
+	
+	return
+	
+function method_explosion 0
+	if object.flags[g_me] &= #flag_animloop
+		call DeleteObject g_me
+	end
+	return
+
+;Ghost Methods
+function init_ghost 0
+	l0 ?= 16
+	l0 += 16
+	l0 *= -1
+	object.vx[g_me] = l0
+	l0 ?= 8
+	l0 += 4
+	if object.posy[g_me] > object.posy[g_player]
+		l0 *= -1
+	end
+	object.vy[g_me] = l0
+	return
+	
+function method_ghost 0
+	return
+
+
+##wavyghost_yspeed 24
+##down 0
+##up 1
+function init_wavyghost 0
+	object.vx[g_me] = -16
+
+	if g_hardmode == true
+		l0 ?= 2
+		
+		if l0 == 0
+			object.vy[g_me] = #wavyghost_yspeed		
+			object.counter[g_me] = #down
+		else
+			object.vy[g_me] = -#wavyghost_yspeed		
+			object.counter[g_me] = #up
+		end
+	else
+		object.vy[g_me] = #wavyghost_yspeed		
+		object.counter[g_me] = #down
+	end
+	return
+
+function method_wavyghost 0
+	
+	if object.counter[g_me] == #down
+		object.vy[g_me] -= 1
+		if object.vy[g_me] <= -#wavyghost_yspeed
+			object.counter[g_me] = #up
+			object.vy[g_me] = -#wavyghost_yspeed
+			return
+		end
+		return
+	end	
+	if object.counter[g_me] == #up
+		object.vy[g_me] += 1
+		if object.vy[g_me] >= #wavyghost_yspeed
+			object.counter[g_me] = #down
+			object.vy[g_me] = #wavyghost_yspeed
+		end
+	end	
+
+
+	return
+
+	
+
+
+;Horse Methods
+function init_horse 0
+
+	return
+
+##max_swordcharge 54
+##swordcharge_superthresh 54
+##superslash_speed 136
+function method_horse_idle 0
+	if f_isButtonPressedButtonA == true
+		call PlayAnimation g_me #anim_horse_charge
+	end
+	if g_A_was_pressed == true
+		call PlayAnimation g_me #anim_horse_charge
+		g_A_was_pressed = false
+	end
+	if f_isButtonHeldButtonA == true
+		if g_swordcharge < #max_swordcharge
+			g_swordcharge += 1
+		end
+		if g_swordcharge == #swordcharge_superthresh
+			call SetObjectPal g_me 8
+		end
+		
+	else
+		;call SetObjectPal g_me 1
+	end
+
+	if f_isButtonReleasedButtonA == true
+		call SetObjectPal g_me 1
+		call func_horse_attack
+	end	
+	call func_horse_standard	
+
+	return
+
+function func_horse_standard 0
+	object.vx[g_me] = 16
+	object.vy[g_me] = 0	
+
+	if f_IsButtonHeldPadDown == true
+		object.vy[g_me] = 32
+	end
+	if f_IsButtonHeldPadUp == true
+		object.vy[g_me] = -32
+	end
+	if f_IsButtonHeldPadRight == true
+		object.vx[g_me] += 32
+	end
+	if f_IsButtonHeldPadLeft == true
+		object.vx[g_me] += -32
+	end
+
+	if object.collisions[g_me] != 0
+		call func_horse_die
+	end
+
+	Array1DFind 0 0 object.type == #enemy l0
+	while l0 != -1
+		call TestObjectToObjectCollision g_me l0
+		if r0 != 0 
+			call func_horse_die
+			breakmore 2
+		end		
+		Array1DFind l0+1 0 object.type == #enemy l0
+	end
+	return
+
+
+function func_horse_attack 0
+	g_A_was_pressed = false
+
+	call PlayAnimation g_me #anim_horse_attack
+	object.method[g_me] = method_horse_action
+	l0 = object.posx[g_me]
+	l0 += 24*16
+	l1 = object.posy[g_me]
+	l1 -= 30*16
+	call AddObject #class_slash l0 l1
+	l0 = object.posx[r0] 
+	;l0 -= 16*16
+	call AddObject #class_hadoken l0 object.posy[r0]
+	return
+	
+function method_horse_action 0
+
+	call func_horse_standard
+	if object.flags[g_me] &= #flag_animloop
+		call func_horse_idle
+	end
+	return
+
+function func_horse_idle 0
+	call PlayAnimation g_me #anim_horse_idle
+	object.method[g_me] = method_horse_idle
+
+	if F_IsButtonHeldButtonA == true
+		g_A_was_pressed = true
+	end
+	return
+
+function func_horse_die 0
+	if g_deathtoggle == false
+		return
+	end
+	object.vx[g_me] = 16
+	object.vy[g_me] = 0
+	object.method[g_me] = method_horse_die
+	object.flags[g_me] |= #flag_ghost
+	call SetObjectPal g_me 5
+	;call PlayAnimation g_me #anim_horse_die
+	g_deathwind = 0
+	
+	call GenerateDeathPieces
+	g_function = DeathFunction
+	return
+
+function method_horse_die 0
+	if object.vy[g_me] < 16
+		object.vy[g_me] += 2
+	end
+	object.flags[g_me] |= #flag_hide
+	return
+
+
+;Slash Methods
+function init_slash 0
+	
+	return
+	
+function method_slash 0
+;	l0 = object.posx[0]
+;	l0 += 16*320
+;	l1 = object.posy[0]
+;	l1 -= 16*19
+;	object.posx[g_me] = l0
+;	object.posy[g_me] = l1
+	;if object.counter[g_me] < 12
+		call AdhereObject g_player 34*16 -28*16
+	;else
+		;object.vx[g_me] = 0
+	;end
+	if object.flags[g_me] &= #flag_animloop
+		call DeleteObject g_me
+	end
+	return
+
+function HurtEnemies 0
+	Array1DFind 0 0 object.type == #enemy l0
+	while l0 != -1
+		call TestObjectToObjectCollision g_me l0
+		if r0 != 0 
+			call ApplyClass l0 #class_explosion 
+			g_killcount *= 2
+			
+			g_score += g_killcount
+		end		
+		Array1DFind l0+1 0 object.type == #enemy l0
+	end
+	return
+	
+	
+function InitialBreak 0
+	l0 = object.posx[g_me]
+	l0 >>= 7
+	l0 += 1
+	l1 = object.posy[g_me]
+	l1 >>= 7
+	l1 += 2
+	call BreakLevel l0 l1 1
+	call BreakLevel l0+1 l1 1
+	call BreakLevel l0+2 l1 1
+	return
+		
+function func_slash_breaklevel 0
+;p0 = level ID
+	l0 = object.posx[g_me]
+	l0 >>= 7
+	l0 += 3	
+	l1 = object.posy[g_me]
+	l1 >>= 7
+	l1 += 2
+	call BreakLevel l0 l1 1
+	return
+
+function BreakLevel 3
+;p0 = x, p1 = y, p2 = width
+
+	;for creating debris...
+	
+	
+	l0 = object.posx[g_me]
+	l0 += 16*16
+	;l0 += camera.posx
+	l1 = object.posy[g_me]	
+	l1 += 16*16
+	;l1 += camera.posy
+	;l4 = l0	;start x (world space) of each row
+
+	p0 &= 31
+	if p0 == g_slasholdx
+		return
+	end
+	g_slasholdx = p0
+	p1 &= 31
+	l2 = 0	;x,y location within break pattern
+	l3 = 0
+	;l5 = p0	;start x pos of each row
+		
+	while l3 < 6
+		l2 = 0
+		tilemapgetAttribute #layer_action p0 p1 [tile] r0
+		tilelistGetAttrib tilelist_bg2 0 1 0 r0 r0
+		if r0 == 3
+			tilemapgetattribute #layer_action p0 p1 [Palette] r0
+			if r0 == #palindex_superpipe
+				tilemapSetAttribute #layer_action p0 p1 [palette] #palindex_pipe
+			else
+				tilemapSetAttribute #layer_action p0 p1 [all] 0
+				call AddObject #class_pipefragment l0 l1
+				l4 ?= 6
+				;l4 += 70
+				l4 += object.vx[g_me]
+				l4 >>= 1
+				l4 *= -1
+				object.vx[r0] = l4
+				;g_score += 10
+			end
+		end
+		p1 += 1
+		p1 &= 31
+		l3 += 1
+		l1 += 8*16
+	end
+	
+	return
+
+
+;Hadoken Methods
+
+function init_hadoken 0
+	SoundPlay sfx_slash
+	if g_swordcharge >= #swordcharge_superthresh
+		object.counter[g_me] = 32
+		call SetObjectPal g_me l0
+		else
+		object.counter[g_me] = g_hadoken_length
+	end
+	if g_swordcharge >= #swordcharge_superthresh
+		call SetObjectPal g_me 7
+	end
+	;if g_swordcharge <= 8
+		;object.counter[g_me] = 5
+		;object.vx[g_me] = 8*16
+		;object.flags[g_me] |= #flag_hide
+	;else
+		g_swordcharge *= 2
+		object.vx[g_me] = g_swordcharge+20	
+		g_swordcharge = 0
+		
+	;end
+	g_killcount = 25
+	call InitialBreak
+	return
+
+function method_hadoken 0
+	if object.vx[g_me] >=< 0 40
+		object.flags[g_me] |= #flag_hide
+	else
+		;object.flags[g_me] ^= #flag_hide
+	end
+
+
+	if object.vx[g_me] > #superslash_speed
+		l0 = g_ticks 
+		l0 &= 1
+		l0 += 6
+		call SetObjectPal g_me l0
+	end
+
+	if object.counter[g_me] == 0
+		call DeleteObject g_me
+	end
+	if object.counter[g_me] == 14
+		call PlayAnimation g_me #anim_hadoken_dissipate
+	end	
+	
+	l0 =  camera.posx
+	l0 += 220*16
+	if object.posx[g_me] >= l0
+		return
+	end
+	l0 += 40*16
+	if object.posx[g_me] >= l0
+		call DeleteObject g_me
+		return
+	end
+		
+	
+;	if object.counter[g_me] == 0	
+
+;	else
+		call func_slash_breaklevel 
+	;end
+	object.counter[g_me] -= 1
+	call HurtEnemies 
+	return
+
+
+;----------------------------
+

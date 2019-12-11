@@ -1,0 +1,55 @@
+;;; Catapult array script file - automatically generated
+;;; any changes made by hand will be lost
+
+
+#best
+One dimensional
+7
+7
+$weight
+32 bit signed
+*false
+RO
+#
+WorkRAM
+AnyAdd
+Array
+0
+0
+
+#board
+Two dimensional
+7
+7
+$token
+8 bit signed
+*false
+RO
+#
+WorkRAM
+AnyAdd
+Array
+28
+0
+
+#win_array
+One dimensional
+4
+7
+$x1
+8 bit signed
+$x2
+8 bit signed
+$y1
+8 bit signed
+$y2
+8 bit signed
+*true
+RW
+#
+WorkRAM
+AnyAdd
+Array
+0
+0
+

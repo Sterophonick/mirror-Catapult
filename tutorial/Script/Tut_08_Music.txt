@@ -1,0 +1,132 @@
+;
+; Tutorial #8 - Sound and Music - (Vers 2 - 08/03/04)
+;	Written by M.Shamgar
+;
+; This tutorial teaches you about : 
+;
+; i. .mod and .wav files
+; ii. Using music and sound resources in Catapult
+; 
+
+; ------------------------------------------------------------------------------
+; Now for a tutorial that will let you really polish your games - adding sound and music! All
+; of the details of loading and playing audio are handled by Catapult, so you should have
+; no trouble at all with spicing up your games with sound. If you are already familiar with
+; MOD and WAV sound formats, you can skip the first section.
+
+
+; ------------------------------------------------------------------------------
+; MOD and WAV files
+;
+; Catapult uses two different formats for sound and music: .mod files for music, and
+; .wav files for sound.
+;
+; A. .mod files:
+;
+; The Catapult music system uses MOD files. MOD is an old format similar to MIDI that
+; has largely been replaced by MP3 and other high-quality audio formats. However,
+; MOD is the perfect format for doing music on the GBA. Catapult uses the excellent NMod
+; system for playing MOD files.
+;
+; Instead of storing a complete music track as a sound recording, MOD's are stored in
+; a sequenced format. This means that each single note is stored with pitch, volume and other
+; information, and the MOD player "reads" the file much as a musician reads a piece of
+; sheet music.
+;
+; You may be familiar with MIDI, another sequenced format. The MOD format is
+; similar, but unlike MIDI, it stores each instrument internally in the file as a sound sample.
+; This means that a MOD file contains all the information needed to recreate the original file
+; exactly, using a small amount of space.
+;
+; Another advantage of MOD files is that you can find freely available software on the internet 
+; (such as "ModPlug Tracker") that will let you do produce professional MOD files that can
+; be dropped straight into your Catapult programs.
+;
+;
+; B. .wav files :
+;
+; .wav files are the format that Catapult uses to store sound effects. This is a very common
+; format, and all sound recorders should be able to export in WAV.
+;
+; Like .mod files, .wav files can be used directly by Catapult. All variations of the WAV format
+; are supported by Catapult.
+;
+;
+
+
+; ------------------------------------------------------------------------------
+; Playing sound and music
+;
+; The following is a basic example of how to get sound/music added to your Catapult project.
+;
+;
+; We use the resource manager to add any new music or sound resources to the project. Lets start with
+; a music resource:
+;
+; 1. Open the resource manager (press Control^R, or select "Resources" from the Assets menu).
+;
+; 2. Click on the "Clone" button to duplicate an existing resource (i.e. create a new resource).
+;
+; 3. Change the ID of the newly created resource to "RID_MOD_SONG". 
+;
+; 4. Change the Type of the resource to 'MOD file'.
+;
+; 5. Use the browse button, and open the "sounds" directory. Select the file called
+; 	"song.mod"
+;
+; 6. Now close the resource manager. We are now ready to play the song.
+;
+; Just below this section you can see the tiny main Catapult loop - that is all you need to play music and
+; sound! Run the program, and press button A to start playing the song, and button B to stop (these are
+; usually mapped to keys 'a' and 's' on a PC).
+;
+
+;
+; Now, stop the project executing. We are going to repeat the above, but with a sound sample:
+;
+; 1. Open the resource manager (press Control^R, or select "Resources" from the Assets menu).
+;
+; 2. Click on the "Clone" button to duplicate an existing resource (i.e. create a new resource).
+;
+; 3. Change the ID of the newly created resource to "RID_MOD_SAMPLE". 
+;
+; 4. Change the Type of the resource to 'Sound effect'.
+;
+; 5. Use the browse button, and open the "sounds" directory. Select the file called
+; 	"sample.wav"
+;
+; 6. Now close the resource manager. 
+;
+;
+;
+; Now that we have added the sound to the resource list, we can play it with the SoundPlay command.
+;
+; But we have to add some code first. Uncomment the lines after the three asterisks (***) in the code below. 
+;
+; Run the project.
+;
+; While the project is running, you can trigger the sound by pressing the start button 
+; (default key on a PC is "space"). 
+;
+; Catapult can play up to 8 sounds simultaneously.
+;
+; Well, wasn't that easy? Now go and put some sound and music into your Catapult games!
+;
+
+
+
+; ==================================
+; CATAPULT SCRIPT BEGINS
+
+	If F_IsButtonPressedButtonB == true
+		MusicStop
+	ElseIf F_IsButtonPressedButtonA == true
+		MusicPlay RID_MOD_SONG
+	End
+	
+	; *** remove the semicolons from the lines below (the lines should then appear in colour)
+	;If F_IsButtonPressedStart == true
+	;	SoundPlay RID_MOD_SAMPLE
+	;End
+
+Return

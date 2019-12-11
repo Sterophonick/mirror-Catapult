@@ -1,0 +1,313 @@
+externfunction "main.txt" DeleteObject
+
+;------- Display
+
+function InitScreen 0
+	
+	displaysetAttribute [VideoMode] 0		;Video mode 0
+	displaysetattribute [EnableSprite] 1	;Enable Sprites
+	displaysetattribute [SpriteLayout] 1	;1D sprite layout
+	
+	displaySetAttribute [EnableBG0] 1		;Enable
+	displaySetAttribute [EnableBG1] 1		;Enable
+	displaySetAttribute [EnableBG2] 1		;Enable
+	displaySetAttribute [EnableBG3] 1		;Enable
+	
+	;action layer
+	tilemapSetColourMode #layer_action 0	;16-color mode
+	tilemapsetPriority #layer_action 1		;Priority
+	tilemapSetSize #layer_action 0		;32x32 
+	tilemapSetMapBank #layer_action 31	;Bank 31
+	tilemapsetTileBank #layer_action 0
+
+	;foreground layer
+	tilemapSetColourMode #layer_foreground 0	;16-color mode
+	tilemapsetPriority #layer_foreground 0		;Priority
+	tilemapSetSize #layer_foreground 0		;32x32 
+	tilemapSetMapBank #layer_foreground 30	;Bank
+	tilemapsetTileBank #layer_foreground 2
+	tilemapsetOffsetX #layer_foreground 0
+	tilemapsetOffsetY #layer_foreground 0
+
+
+	;background layer 1
+	tilemapSetColourMode #layer_background1 0	;16-color mode
+	tilemapsetPriority #layer_background1 2		;Priority 
+	tilemapSetSize #layer_background1 0			;32x32 
+	tilemapSetMapBank #layer_background1 29		;Bank 16
+	tilemapsetTileBank #layer_background1 0	
+	
+	;background layer 2	
+	tilemapSetColourMode #layer_background2 0	;16-color mode
+	tilemapsetPriority #layer_background2 3		;Priority 
+	tilemapSetSize #layer_background2 3			;64x64
+	tilemapSetMapBank #layer_background2 25		;Bank 18
+	tilemapsetTileBank #layer_background2 2	
+	
+	
+	
+;	;Set blending parameters
+	DisplaySetBlendMode 0
+
+	DisplaySetBlendAttribute [SpriteSource] 1
+	DisplaySetBlendAttribute [BG1Target] 1		
+	DisplaySetBlendAttribute [BG3Target] 1		
+	DisplaySetBlendAttribute [BackdropTarget] true
+	;DisplaySetBlendAttribute [BackdropSource] 1		
+	DisplaySetBlendAlphaLevel 10 17
+	
+	call InitFont	
+
+	return
+
+function Render 0	
+	call Scroll
+	call DisplayObjects
+	call DisplayScore
+	call CycleBillboards
+	return
+
+
+function ClearScreen 0	
+	tilemapFillRect #layer_action [All] 0 0 32 32 0			;Clear action layer
+	tilemapFillRect #layer_foreground [All] 0 0 32 32 0		;Clear HUD layer
+	tilemapFillRect #layer_background1 [All] 0 0 32 32 0		;Clear HUD layer
+	return
+
+function ClearSprites 0
+	l0 = 0
+	while l0 < 128
+		spriteSetAttribute l0 [RotScale] 0		;reset rot/scale mode
+		spriteSetAttribute l0 [SdFold] 1		;set double-area (thus disable sprite)
+		spriteSetAttribute l0 [DisplayMode] 0 	;normal sprite display
+		spritesetattribute l0 [RenderLayer] 0	;render layer 1
+		l0 += 1
+	end
+	return
+	
+function ClearSprite 1
+;p0 = sprite #
+		;spriteSetAttribute p0 [RotScale] 0		;reset rot/scale mode
+		spriteSetAttribute p0 [SdFold] 1		;set double-area (thus disable sprite)
+		;spriteSetAttribute p0 [DisplayMode] 0 	;normal sprite display
+		;spritesetattribute p0 [RenderLayer] 0	;render layer 1
+	return
+
+function BlankDisplay 0
+	PaletteSetColour [bg] 0 {0,0,0}
+	DisplaySetAttribute [BlankDisplay] 1
+	return
+
+function Scroll 0
+	call GetPixelXY camera.oldx camera.oldy
+	l0 = r0
+	l1 = r1
+	call GetPixelXY camera.posx camera.posy
+	l2 = r0
+	l3 = r1
+	
+	LevelScroll stagedata.fg1[g_stage] #layer_action l0 l1 l2 l3 0
+
+
+	; Parallax layers
+;	l0 = l2
+;	l1 = l3
+;	l0 <<= 3
+;	l1 <<= 3
+;	call SetBGOffsets #layer_foreground l0 l1
+	l0 = l2
+	l1 = l3
+	l0 >>= 1
+	l1 >>= 1
+	call SetBGOffsets #layer_background1  l0 l1
+	l0 = l2
+	l1 = l3
+	l0 >>= 2
+	l1 >>= 2
+	call SetBGOffsets #layer_background2 l0 l1
+
+	camera.oldx = camera.posx
+	camera.oldy = camera.posy
+	return
+
+function SetBGOffsets 3
+;p0 = layer, p1 = x, p2 = y
+	p1 &= 511
+	p2 &= 511
+	TileMapSetOffsetX p0 p1
+	TileMapSetOffsetY p0 p2	
+	return
+	
+
+function DisplayObjects 0
+	g_me = 0
+	g_spritenum = 0
+
+	;call ClearSprites
+	
+	;Process objects not of type -1
+	array1dfind g_me 0 object.type != -1 g_me
+	while g_me != -1
+		call DisplayObject
+		array1dfind g_me+1 0 object.type != -1 g_me
+	end
+	return
+
+function DisplayObject 0
+	;g_me = sprite # (now direct correlation between objects and the sprites they use)
+
+	if object.flags[g_me] &= #flag_hide
+		call ClearSprite g_me
+		return
+	end
+	
+	spriteSetAttribute g_me [SdFold] 0	;enable sprite	
+	call TransformXY object.posx[g_me] object.posy[g_me]
+	call GetPixelXY r0 r1
+
+	
+	; x outside screen?
+	if r0 <> -64 240+64
+		Call DeleteObject g_me
+		Return
+	End
+	
+	; y outside screen?
+	if r1 <> -64 160+64
+		Call DeleteObject g_me
+		Return
+	End
+	
+	r0 -= object.hitx[g_me]
+	r1 -= object.hity[g_me]
+	r0 &= 511
+	r1 &= 255
+	spriteSetAttribute g_me [Xpos] r0
+	spriteSetAttribute g_me [Ypos] r1
+	
+	
+
+	;call GetBit object.flags[g_me] #flag_fliph
+	;SpriteSetAttribute g_me [FlipHorizontal] r0
+	;call GetBit object.flags[g_me] #flag_flipv
+	;SpriteSetAttribute g_me [FlipVertical] r0
+	
+	if object.flags[g_me] &= #flag_transparent
+		SpriteSetAttribute g_me [DisplayMode] 1
+	else
+		SpriteSetAttribute g_me [DisplayMode] 0
+	end
+
+	return
+
+function GetBit 2
+;p0 = number, p1 = flag number
+;returns: r0 = 0 or 1
+	if p0 &= p1
+		return 1
+	else
+		return 0
+	end
+
+function TransformXY 2
+;p0 = x, p1 = y
+;returns: r0 = x-camera.posx, r1 = y-camera.posy	
+	p0 -= camera.posx
+	p1 -= camera.posy
+	return p0 p1
+
+function GetPixelXY 2
+;p0 = x, p1 = y
+;returns: r0 = x/16, r1 = y/16
+	p0 >>= 4
+	p1 >>= 4
+	return p0 p1
+	
+;Camera
+;--------------
+function ProcessCamera 0
+	camera.posx += camera.vx
+	camera.posy += camera.vy
+	
+	;Make camera move vertically based on player's position on screen
+	call TransformXY object.posx[g_player] object.posy[g_player]
+	if r1 < 60*16
+		l0 = object.posy[g_player]
+		l0 -= 60*16
+		camera.posy = l0
+	end
+	if r1 > 70*16
+		l0 = object.posy[g_player]
+		l0 -= 70*16
+		camera.posy = l0
+	end
+	
+	;Restrict Camera from going outside of the level
+	if camera.posx < 0
+		camera.posx = 0
+	end
+	if camera.posy < 0
+		camera.posy = 0
+	end
+	if camera.posy >= 13824-128
+		camera.posy = 13824-128
+	end
+	
+	
+	;Restrict player from going outside view
+	if object.posx[g_player] < camera.posx
+		object.posx[g_player] = camera.posx
+	end	
+	if object.posy[g_player] < camera.posy
+		object.posy[g_player] = camera.posy
+	end	
+		
+	;Restrict player from going outside level
+	if object.posy[g_player] >= 15872
+		object.posy[g_player] = 15872
+	end	
+		
+	
+	return
+
+function ControlCamera 0
+	if f_IsButtonHeldPadDown == true
+		camera.posy += 16
+	end
+	if f_IsButtonHeldPadUp == true
+		camera.posy -= 16
+	end
+	if f_IsButtonHeldPadRight == true
+		camera.posx += 16
+	end
+	if f_IsButtonHeldPadLeft == true
+		camera.posx -= 16
+	end
+	return	
+
+function DrawBackground 0
+	LevelDrawRect LEVEL_BACKGROUND #layer_background2 0 0 0 0 64 64 0
+	return
+
+function InitFont 0
+	StringDisplaySetTarget #layer_foreground fontmap_digit 0	
+	StringDisplaySetColour 1 1
+	palettesetcolour [bg] 28 {2,31,2}
+	return
+
+function DisplayScore 0
+	StringDisplayValue 29 19 10 g_score
+	return
+
+
+function CycleBillboards 0
+	l0 = g_ticks 
+	l0 &= 127
+	if l0 == 0
+		g_billboard += 1
+		if g_billboard > 3
+			g_billboard = 1
+		end
+		TilelistGroupLoad tilelist_bg2 [bg] g_billboard 0
+	end
+	return

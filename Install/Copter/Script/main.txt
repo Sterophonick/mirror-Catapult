@@ -1,0 +1,447 @@
+; =======================================================
+; $Source: N:\\REPOS/Current/Data/Catapult/copter/Script/main.txt,v $
+; $Date: 2003/03/14 03:39:26 $
+; $Revision: 1.1 $
+; =======================================================
+;
+; Main module for copter/scrambler GamePack title - V1.31b
+;
+; Written by Michael Shamgar
+; Art by Kieran Nolan, Raymond Leung
+; Title screen by Paul Bowers
+; 
+; This is a example of a medium level complexity game written in Catapult.
+; Roughly 25 hours of work was needed to create this from scratch.
+;
+; All rights reserved, Nocturnal Entertainment Australia 2003
+;
+;
+ 
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Game State control
+; 
+
+; --- Game State --------------------------
+
+	Call 	G_GAMESTATE
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Main loop for the main menu
+; 
+
+Function GameState_MainMenu 0
+
+	; no transition active?
+	Call Transition_IsActive
+	If V_RV0 == false
+	
+		; display 'press start'
+		StringDisplay 6 1 SID_WELCOMECOPTER
+	
+		; cycle through instructions
+		V_LV0 = G_TICKS
+		V_LV0 >>= 8
+		V_LV0 %= 8			; number of instructions
+		V_LV0 += SID_INSTRUCT_1
+		
+		; blank out region behind text
+		TileMapFillRect 1 [All] 0 13 32 1 1263-1024
+		
+		; centre text
+		V_LV1 StringGetLength V_LV0
+		V_LV2 = 32
+		V_LV2 -= V_LV1
+		V_LV2 /= 2
+		StringDisplay V_LV2 13 V_LV0
+		
+		; move copter screen around a little
+		V_LV1 = G_TICKS
+		V_LV1 /= 4
+		V_LV0 Bounce V_LV1 15
+		V_LV0 -= 4
+		TileMapSetOffsetX 0 V_LV0
+		V_LV0 Bounce V_LV1+4 15
+		V_LV0 -= 4
+		TileMapSetOffsetY 0 V_LV0
+		
+		; fade out, start game		
+		If F_IsButtonPressedStart == true
+			; start transition - force all layers to fade
+			Call Transition_FadeToBlackStart false
+		End
+	Else
+		Call Transition_Continue
+		
+		; finished?
+		Call Transition_IsActive
+		If V_RV0 == false
+			; start new game
+			Call Initialise_Game
+			G_GAMESTATE = GameState_Game
+			Call Transition_FadeFromBlackStart
+
+			; start text in?
+			Call Transition_TextSlideStart
+		End
+	End
+
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Main loop for game playing
+; 
+
+Function GameState_Game 0
+
+	; --- main menu transition?
+	Call Transition_IsActiveFadeIn
+	If V_RV0 == true
+		Call Transition_Continue
+
+		; finished?
+		Call Transition_IsActive
+		If V_RV0 == false
+			; turn on searchlight
+			Call Copter_SetupLight
+		End
+	End
+
+	; text transition
+	Call Transition_TextSlideUpdate
+	
+	If G_LIFECOUNT >= 0
+		; --- firstly call any screen related functions - as the GBA is more likely to be in VBLank (i.e. no flicker)
+		call Copter_FrameTick 
+		call Terrain_FrameTick
+		call Background_FrameTick
+		
+		; then call any other functions
+		call Copter_ProcessTick
+		call Explosion_FrameTick
+		call Object_FrameTick
+		call Powerup_FrameTick
+		call Terrain_Scroll
+	Else
+		; --- game over
+		G_HBLANK_FN = -1
+		G_SEARCHLIGHT_ON = false
+
+		; Hide backgrounds + light
+		DisplaySetAttribute [EnableBG1] false
+		DisplaySetAttribute [EnableBG2] false
+		DisplaySetAttribute [EnableSprite] false
+		DisplaySetBlendMode 0
+		
+		; make text flash
+		V_LV0 = G_TICKS
+		V_LV0 >>= 4
+		If V_LV0 %= 2
+			TileMapFillRect #LID_HUD [All] 0 9 32 3 0
+		Else
+			StringDisplay 10 9 SID_GAMEOVER
+			StringDisplay 3  11 SID_PLAYAGAIN
+		End
+
+		; start new game?
+		IF F_IsButtonPressedStart == true
+			Call Initialise_MainMenu
+			G_GAMESTATE = GameState_MainMenu
+		End
+	End
+	
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Main loop for finished state
+; 
+
+Function GameState_Finished 0
+
+	If F_IsButtonPressedStart == true
+		Call Initialise
+	End
+
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Call this to complete a game
+; 
+
+Function GameState_SetFinished 0
+
+	G_GAMESTATE = GameState_Finished
+
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Initialise the copter project
+; 
+
+Function Initialise 0
+
+	; initialise top scrore
+	If G_TICKS == 0
+		G_BESTSCORE = 0
+	End
+	
+	G_SEARCHLIGHT_ON = false
+
+	; --- set display
+	DisplaySetAttribute [BlankDisplay] false 
+	DisplaySetAttribute [EnableSprite] true
+	DisplaySetAttribute [EnableBG0] true			; hud, some tiles
+	DisplaySetAttribute [EnableBG1] true			; level, main
+	DisplaySetAttribute [EnableBG2] true			; level background
+	DisplaySetAttribute [EnableBG3] true			; sky
+	DisplaySetAttribute [VideoMode] 0				; tiled mode
+	
+	; turn windowing/blending OFF
+	DisplaySetAttribute [EnableWindowA] false
+	DisplaySetAttribute [EnableWindowB] false
+	DisplaySetBlendMode 0
+	
+	TileMapSetpriority 0 0
+	TileMapSetpriority 1 1
+	TileMapSetpriority 2 2
+	TileMapSetpriority 3 3
+	
+	DisplaySetAttribute [SpriteLayout] true
+	; --- setup tilemaps 
+	TileMapSetMapBank 0 31
+	TileMapSetMapBank 1 30
+	TileMapSetMapBank 2 29
+	TileMapSetMapBank 3 28
+	
+	TileMapSetSize 0 0			; 32x32 tiles
+	TileMapSetSize 1 0			; 32x32 tiles
+	TileMapSetSize 2 0			; 32x32 tiles
+	TileMapSetSize 3 0			; 32x32 tiles
+	
+	TileMapSetTileBank 0 0
+	TileMapSetTileBank 1 0
+	TileMapSetTileBank 2 0
+	TileMapSetTileBank 3 0
+	
+	; --- clear tilemaps
+	TileMapFillRect 0 [All] 0 0 32 32 0
+	TileMapFillRect 1 [All] 0 0 32 32 0
+	TileMapFillRect 2 [All] 0 0 32 32 0
+	TileMapFillRect 3 [All] 0 0 32 32 0
+
+	; --- setup transitions
+	call Transition_Initialise
+	
+	; Initial game state
+	Call Initialise_MainMenu
+	G_GAMESTATE = GameState_MainMenu
+	G_HBLANK_FN = -1
+	
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Initialise the main menu
+; 
+
+Function Initialise_MainMenu 0
+
+	DisplaySetAttribute [VideoMode] #_VIDMODE_TILED_NONROT4		; 4 non-rot
+
+	; two backgrounds - one for title, one for text
+	DisplaySetAttribute [EnableSprite] false
+	DisplaySetAttribute [EnableBG0] true			; title
+	DisplaySetAttribute [EnableBG1] true			; text
+	DisplaySetAttribute [EnableBG2] false
+	DisplaySetAttribute [EnableBG3] false
+
+	; set colour mode
+	TileMapSetColourMode 0 #_COL_256
+	TileMapSetColourMode 1 #_COL_16
+
+	TileMapSetTileBank 0 0
+	TileMapSetTileBank 1 2
+
+	; load title screen
+	PaletteLoad [bg] RID_PAL_TITLE 0
+	TileMapLoad 0 RID_TILEMAP_TITLE 0 0
+	TileDataLoad [bg] RID_IMAGE_TITLE 0 0
+
+	; turn off windows
+	DisplaySetAttribute [EnableWindowA] 0
+	DisplaySetAttribute [EnableWindowB] 0
+
+	; setup font, in tile bank 2 (0..3)
+	TileDataLoad [bg] RID_IMAGE_FONT 1200 0
+	PaletteSetColour [bg] 225 {31,31,31}						; white font
+	PaletteSetColour [bg] 226 {21,21,21}						; grey secondary colour
+
+	; draw text to layer 1
+	StringDisplaySetTarget 1 fontmap_1 1200-1024				; bank 2 = 1024 tiles offset
+	StringDisplaySetColour true #PIX_TILE_FONT				; display the font in white for now
+
+	; put layer 1 on top of layer 0
+	TileMapSetPriority 0 1
+	TileMapSetPriority 1 0
+
+	; fill layer 1 with space
+	TileMapFillRect 1 [All] 0 0 32 32 1263-1024
+		
+	; setup layer offsets
+	TileMapSetOffsetX 0 0
+	TileMapSetOffsetY 0 0
+	TileMapSetOffsetX 1 0
+	TileMapSetOffsetY 1 0
+		
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Initialise a new game
+; 
+
+Function Initialise_Game 0
+
+	; --- switch to normal video mode
+	DisplaySetAttribute [VideoMode] 0			; 4 non-rot layers
+
+	DisplaySetAttribute [EnableSprite] true
+	DisplaySetAttribute [EnableBG0] true			; hud, some tiles
+	DisplaySetAttribute [EnableBG1] true			; level, main
+	DisplaySetAttribute [EnableBG2] true			; level background
+	DisplaySetAttribute [EnableBG3] true			; sky
+	
+	; test : set target blend layers to on
+	DisplaySetBlendAttribute [BG0Target] true
+	DisplaySetBlendAttribute [BG1Target] true
+	DisplaySetBlendAttribute [BG2Target] true
+	DisplaySetBlendAttribute [BG3Target] true
+	DisplaySetBlendAttribute [SpriteTarget] true
+	
+	; set colour mode
+	TileMapSetColourMode 0 #_COL_16
+	TileMapSetColourMode 1 #_COL_16
+
+	; restore tilebank
+	TileMapSetTileBank 1 0
+	
+	; fill tile 0 with nothing
+	TileDataFillTiles [bg] #_COL_16 0 1 0
+		
+	DisplaySetBlendAlphaLevel 12 8
+	
+	; restore and priority size to normal..
+	TileMapSetPriority 0 0
+	TileMapSetPriority 1 1
+	TileMapSetSize 2 0
+	TileMapSetPriority 2 2
+
+	; setup layer offsets
+	TileMapSetOffsetX 0 0
+	TileMapSetOffsetY 0 0
+
+	; --- clear tilemaps
+	TileMapFillRect 0 [All] 0 0 32 32 0
+	TileMapFillRect 1 [All] 0 0 32 32 0
+	TileMapFillRect 2 [All] 0 0 32 32 0
+	TileMapFillRect 3 [All] 0 0 32 32 0
+
+	; --- setup fontmap
+	TileDataLoad [bg] RID_IMAGE_FONT #TIX_FONT_1 0
+;	PaletteSetColour [bg] 225 {31,31,31}						; white font
+	PaletteSetColour [bg] 225 {0,0,0}							; black font
+	PaletteSetColour [bg] 226 {21,21,21}						; grey secondary colour
+	StringDisplaySetTarget #LID_HUD fontmap_1 #TIX_FONT_1
+	StringDisplaySetColour true #PIX_TILE_FONT				; display the font in white for now
+
+	; --- Initialise game components
+	call Copter_Initialise
+	
+	; --- Initialise terrain components
+	call Terrain_Initialise
+	
+	; --- Initialise collision table
+	Call Collide_Initialise
+	
+	; --- Initialise explosions
+	Call Explosion_Initialise
+	
+	; --- Initialise backgrounds
+	Call Background_Initialise
+	
+	; --- Initialise objects
+	Call Object_Initialise
+
+	; --- Initialise powerups
+	Call Powerup_Initialise
+	
+	; HUD objects	
+	TileDataLoad [bg] RID_IMAGE_TRIP_METER #TIX_TIP_METER 0
+	
+	DisplaySetAttribute [EnableSprite] true		; sprites on
+
+	; Game hblank handler
+	G_HBLANK_FN = Background_HBlank
+
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Hblank handler - calls the Background handler during
+; game modes. If 'G_HBLANK_FN' is negative no function
+; is called.
+; 
+
+Function HBlankCB 1	; line id
+	
+	Call G_HBLANK_FN V_EV0
+	
+Return
+
+; === external function/script list ================================================================
+
+; --- collide
+ExternFunction "collide" Collide_Initialise 
+
+; --- explosions
+ExternFunction "explosions" Explosion_Initialise
+ExternFunction "explosions" Explosion_FrameTick
+
+; --- objects
+ExternFunction "objects" Object_Initialise
+ExternFunction "objects" Object_FrameTick
+
+; --- powerups
+ExternFunction "powerup" Powerup_Initialise
+ExternFunction "powerup" Powerup_FrameTick
+
+; --- copter
+ExternFunction "copter" Copter_Initialise
+ExternFunction "copter" Copter_SetupLight
+ExternFunction "copter" Copter_FrameTick
+ExternFunction "copter" Copter_ProcessTick
+
+; --- terrain
+ExternFunction "terrain" Terrain_Initialise
+ExternFunction "terrain" Terrain_Scroll
+ExternFunction "terrain" Terrain_FrameTick
+
+; --- backgrounds
+ExternFunction "background" Background_Initialise
+ExternFunction "background" Background_HBlank
+ExternFunction "background" Background_FrameTick
+
+; --- transitions
+ExternFunction "Transitions" Transition_Initialise
+ExternFunction "Transitions" Transition_FadeToBlackStart
+ExternFunction "Transitions" Transition_FadeFromBlackStart
+ExternFunction "Transitions" Transition_IsActive
+ExternFunction "Transitions" Transition_Continue
+ExternFunction "Transitions" Transition_IsActiveFadeIn
+
+ExternFunction "Transitions" Transition_TextSlideStart
+ExternFunction "Transitions" Transition_TextSlideUpdate
+
+; include files containing definitions
+ExternScript "states"
+ExternScript "object_list"
+ExternScript "Transitions"
+

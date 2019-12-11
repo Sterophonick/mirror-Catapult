@@ -1,0 +1,226 @@
+ExternFunction "Display.txt" ClearSprite
+
+##collide_left		0x01
+##collide_right	0x02
+##collide_up		0x04
+##collide_down	0x08
+
+; Object functions
+
+function ClearObjects 0
+	l0 = 0
+	while l0 < #total_objects
+		object.type[l0] = -1
+		
+		Call ClearSprite l0
+		l0 += 1
+	end	
+	return	
+
+	
+function AnimateObject 0
+	object.pause[g_me] -= 1
+	if object.pause[g_me] == 255
+		g_anim = object.anim[g_me]
+		object.pause[g_me] = animdata.speed[g_anim]
+		object.frame[g_me] += 1
+		if object.frame[g_me] > animdata.endframe[g_anim] 
+			object.frame[g_me] = animdata.loop[g_anim]
+			object.flags[g_me] |= #flag_animloop
+		end
+	end
+	call GetFrameData g_me object.frame[g_me]
+	return
+
+function PlayAnimation 2
+;p0 = obj #, p1 = anim #
+	object.flags[p0] |= #flag_animate
+	object.anim[p0] = p1
+	object.frame[p0] = animdata.startframe[p1]
+	object.pause[p0] = animdata.speed[p1]
+	call GetFrameData p0 object.frame[p0]
+	return
+	
+function GetFrameData 2
+;p0 = obj #, p1 = frame #
+	;object.sprsize[p0] = framedata.sprsize[p1]
+
+	l0 = framedata.sprsize[p1]
+	l0 &= 0x03
+	spriteSetAttribute p0 [SizeBottom] l0
+	l0 = framedata.sprsize[p1]
+	l0 >>= 2		
+	spriteSetAttribute p0 [SizeTop] l0
+	
+	spriteSetAttribute p0 [TileIndex] framedata.tileindex[p1]
+	
+	
+	if framedata.resource[p1] != -1
+		if framedata.rangeindex[p1] != -1
+			resourceSetIndex framedata.rangeindex[p1]
+		end
+		tileDataLoad [sprite] framedata.resource[p1] framedata.tileindex[p1] 0
+	end
+	return 
+	
+function SetFrame 2
+;p0 = obj #, p1 = frame #
+	object.frame[p0] = p1
+	call GetFrameData p0 p1
+	return
+	
+	
+	
+function MoveObject 0
+	object.collisions[g_me] = 0 ; reset collision flags
+	
+	; Move
+	if object.vx[g_me] != 0					
+		object.posx[g_me] += object.vx[g_me]
+		if object.flags[g_me] &= #flag_ghost
+		else
+			call CheckObjectToMapCollision
+			
+			if r0 != false
+				if object.vx[g_me] < 0
+					;Left hit	
+					object.collisions[g_me] |= #collide_left									
+					object.posx[g_me] &= 0xFFFFFF80
+					object.posx[g_me] += 128
+				else					
+					object.collisions[g_me] |= #collide_right
+					object.posx[g_me] &= 0xFFFFFF80
+					
+					;object.x[g_me] -= 16							
+					if object.hitw[g_me] < 8
+						object.posx[g_me] += 128	
+						l5 = object.hitw[g_me]
+						l5 <<= 4
+						l5 += 16
+						object.posx[g_me] -= l5
+					end
+				end
+			end
+		end
+	end
+	
+	if object.vy[g_me] != 0	
+		object.posy[g_me] += object.vy[g_me]		
+		if object.flags[g_me] &= #flag_ghost
+		else
+		
+			call CheckObjectToMapCollision
+
+			if r0 != 0x00
+				if object.vy[g_me] < 0
+					;Up Hit
+					object.collisions[g_me] |= #collide_up
+					object.posy[g_me] &= 0xFFFFFF80
+					object.posy[g_me] += 128
+					
+				else					
+					object.collisions[g_me] |= #collide_down
+					object.posy[g_me] &= 0xFFFFFF80
+
+					;object.y[g_me] -= 16
+					if object.hith[g_me] < 8
+						object.posy[g_me] += 128		
+						l5 = object.hith[g_me]
+						
+						l5 <<= 4
+						;l5 += 16
+
+						object.posy[g_me] -= l5
+					end
+				end
+			end
+		end
+	end
+	return
+
+function CheckObjectToMapCollision 0
+;returns r0 = true or false
+	l4 = object.posx[g_me]
+	l5 = object.posy[g_me]
+	
+	;l0 = camera.posx
+	;l1 = camera.posy
+	;l0 &= 0xffffff80
+	;l1 &= 0xffffff80
+	;l4 -= l0
+	;l5 -= l1
+	l4 >>= 4
+	l5 >>= 4
+	
+	l4 &= 255
+	l5 &= 255
+
+	collidetestregionvrstiles #layer_action l4 l5 object.hitw[g_me] object.hith[g_me] 0x01 l0
+	return l0
+	
+function AdhereObject 3
+; p0 = object #, p1 = x, p2 = y
+	l0 = object.posx[p0]
+	l1 = object.posy[p0]
+	l0 += p1
+	l1 += p2
+	object.posx[g_me] = l0
+	object.posy[g_me] = l1
+	return
+	
+function TestObjectToObjectCollision 2
+;p0 = object #1, p0 = object #2
+;returns r0 = false/true
+
+	; test right obj1 vrs left obj 2
+	l0 = object.hitw[p0]
+	l0 <<= 4
+	l0 += object.posx[p0]
+	
+	If l0 < object.posx[p1]
+		return false
+	end	
+
+	; test bottom obj1 vrs top obj 2
+	l1 = object.hith[p0]
+	l1 <<= 4
+	l1 += object.posy[p0]
+	
+	If l1 < object.posy[p1]
+		return false
+	end	
+
+	; test right obj2 vrs left obj 1
+	l0 = object.hitw[p1]
+	l0 <<= 4
+	l0 += object.posx[p1]
+	
+	If l0 < object.posx[p0]
+		return false
+	end	
+
+	; test bottom obj2 vrs top obj 1
+	l1 = object.hith[p1]
+	l1 <<= 4
+	l1 += object.posy[p1]
+	
+	If l1 < object.posy[p0]
+		return false
+	end	
+	return True
+
+function TestPointInRegion 6
+;p0 = rx1, p1 = ry1, p2 = rx2, p3 = ry2 , l0 = x, l1 = y
+;returns: r0 = true/false
+	if l0 >=< p0 p2
+		if l1 >=< p1 p3
+			return true
+		end
+	end
+	return false
+	
+
+function SetObjectPal 2
+;p0 = g_me, p1 = pal #
+	SpriteSetAttribute p0 [PaletteIndex] p1
+	return

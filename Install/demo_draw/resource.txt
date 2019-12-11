@@ -1,0 +1,4 @@
+;;; Catapult resource script file - automatically generated
+;;; any changes made by hand will be lost
+
+

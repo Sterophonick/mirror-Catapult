@@ -1,0 +1,14 @@
+;;; Catapult resource script file - automatically generated
+;;; any changes made by hand will be lost
+
+
+#RID_TILE_GREEN_BLOB
+.\Images\green_blob.bmp
+Bitmap16
+None
+true
+#Decimal00
+0
+false
+false
+

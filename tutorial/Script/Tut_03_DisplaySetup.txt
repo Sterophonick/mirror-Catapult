@@ -1,0 +1,150 @@
+;
+; Tutorial #3 - Display/Setup (Vers 2 - 06/02/04)
+;	Written by M.Shamgar
+;
+; This tutorial teaches you : 
+;
+; i. How to configure the Display.
+; ii. What the Display functions do.
+; 
+; (NOTE! This tutorial cannot be executed, it just contains instructions)
+
+; -----------------------------------------------------------------------------------
+; The first thing a project normally does, is configure the GBA display to match the
+; needs of the project. This is done by using 'Display' commands (usually in the 'Initialise' function).
+;
+; At certain times a project may also utilise 'Display' commands during gameplay, 
+; during screen transitions or for special effects (this is not covered now).
+;
+
+Function Initialise 0
+
+	; This command handles most of the display configuration.
+	; The attribute determines which component of the display is modified.
+	; The value will change, based on the attribute used.
+	
+	DisplaySetAttribute [attribute] value
+
+
+	; 'false' and 'true' can be used instead of numbers (so can 'on' or 'off).
+	;
+	; false = off = 0
+	; true = on = 1
+
+	; By default, the GBA hardware has the display turned off. To make anything appear
+	; the display must be first turned on. When off, the GBA processes commands faster.
+	; This is useful for initialisation (i.e. during a level load).
+	
+	DisplaySetAttribute [BlankDisplay] false
+
+
+	; In video mode 0 (the most common video mode), the GBA has 4 tiled backgrounds. 
+	; (this is the maximum number of backgrounds the GBA has).
+	;
+	; In other modes, a subset of these backgrounds is used. See the GBA / Catapult
+	; documentation for more information on other modes.
+	
+	; By default each of these backgrounds is turned off.
+	;
+	; Before anything within a background will appear, it must be turned on. 
+	; There are 4 different background enable attributes (one per background layer)
+	
+	DisplaySetAttribute [EnableBG0] true
+	DisplaySetAttribute [EnableBG1] true
+	DisplaySetAttribute [EnableBG2] true
+	DisplaySetAttribute [EnableBG3] true
+	
+
+	; Sprites are also "off" by default. If a project wants to use any sprite effects, they must 
+	; be turned on first:
+	
+	DisplaySetAttribute [EnableSprite] true
+
+	; (it can be noted, that even when the sprites are enabled, the default state for
+	; each sprite is hidden/disabled)
+
+ 
+	; -------------------------------------------------------------------------------------------------
+	; Some of the other display attributes:
+	
+	; Select a video mode:
+	;
+	; 0 = 4 non-rotational backgrounds
+	; 1 = 2 non-rotational backgrounds, 1 rotational background
+	; 2 = 2 rotational background
+	; 3 = Frame buffer mode (16bit, no palette. 240x160 size, 1 page)
+	; 4 = Frame buffer mode (8bit, palettised. 240x160 size, 2 pages)
+	; 5 = Frame buffer mode (16bit, no palette. 160x128 size, 2 pages)
+
+	DisplaySetAttribute [VideoMode] 0
+
+	; Sprite layout mode:
+	;
+	; Any sprite bigger than 8x8, uses more than one tile to form its image. Sprites
+	; have a single attribute to determine the tile index (i.e. which is the FIRST tile used
+	; by the sprite).
+	;
+
+	; There are two modes available:
+	; - consecutive mode (a sprite always uses consecutive tile indices), i.e.:
+	; 	A 16x16 sprite requires 4 tiles (2x2). The tile index for the sprite is 100. It will also use 
+	; 	tiles 101, 102, & 103 in its image.
+
+	DisplaySetAttribute [SpriteLayout] 0		; use conseq tile indexes
+
+	; - two-dimensional mode (each following 'line' of sprite tiles, is offset by 32 from the previous line).
+	; 	This mode is normally not used, but is the default GBA mode on startup.
+	;	As this is the default mode, it is often changed to consecutive mode.
+
+	DisplaySetAttribute [SpriteLayout] 1		; use 2D tile indexes
+
+	; Example: 
+	; 	A 16x16 sprite requires 4 tiles (2x2). The tile index for the sprite is 100. 
+	
+	; 	- consecutive mode : Sprite uses tiles 100, 101, 102, 103.
+	;
+	;	- 2D mode :  Sprite uses tiles 100, 101, 132, 133 (as a 16x16 sprite is two tiles high).
+	;
+	; 	A 16x8 sprite would use tiles : 100, 101
+	; 	A 8x16 sprite would use tiles : 100, 132
+
+
+	; Page flip mode:
+	;
+	; When a video mode is enabled that supports page flipping (i.e. mode 4 or 5), 
+	; this determines which of the two pages is currently the 'visible' page.
+	
+	DisplaySetAttribute [PageFlip] 0		; 0 = page 0, 1 = page 1
+	
+
+	; Windowing settings:
+	;
+	; The GBA supports three types of 'windows' on the display.
+	; A window is a region of the display, where special conditions exist on
+	; drawing sprites or backgrounds (i.e. it is possible to hide some sprites
+	; in part of a window).
+	;
+	; Windowing is an advanced topic, and will be covered later (much later!!).
+	; (It is a good idea to turn windowing off at the start of a project).
+	;
+	; There are three display commands to enable/disable each window:
+	
+	DisplaySetAttribute [EnableSpriteWindow] false			; turn off sprite window
+	DisplaySetAttribute [EnableWindowA] false				; turn off WindowA
+	DisplaySetAttribute [EnableWindowB] false				; turn off WindowB
+
+	; HblankProcess:
+	;
+	; This has no effect within Catapult, and is not covered here.
+	; (tells the GBA whether it can use the HBlank portion to handle
+	; additional sprite processing. This must be turned OFF when
+	; HBlank effects are used!).
+	
+	DisplaySetAttribute [HblankProcess] false				; dont use HBlank for sprite processing
+
+End
+
+; That completes the discussion of the Display attributes for now. 
+;
+; In tutorial#4, we make things appear on the screen!
+

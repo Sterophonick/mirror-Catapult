@@ -1,0 +1,42 @@
+;;; Catapult array script file - automatically generated
+;;; any changes made by hand will be lost
+
+
+#Calculation3D
+One dimensional
+1
+0
+$m
+$3D matrix
+
+$temp
+$3D vector
+
+*false
+RO
+#
+WorkRAM
+AnyAdd
+Array
+0
+0
+
+#Shape3D
+One dimensional
+3
+0
+$vertex
+$3D vector
+
+$vertex_rotated
+$3D vector
+
+*false
+RO
+#
+WorkRAM
+AnyAdd
+Array
+60
+0
+

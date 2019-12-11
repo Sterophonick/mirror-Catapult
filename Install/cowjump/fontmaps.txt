@@ -1,0 +1,14 @@
+;;; Catapult fontmap script file - automatically generated
+;;; any changes made by hand will be lost
+
+
+#g_px
+Ascii
+true
+$65
+90
+0
+$32
+32
+26
+

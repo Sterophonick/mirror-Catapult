@@ -1,0 +1,549 @@
+;
+; Tutorial #6 - Variable Basics  (Vers 2 - 11/02/04)
+;	Written by M.Shamgar
+;
+; This tutorial talks about :
+;
+; i. Different types of variables (local, global, function & array).
+; ii. Basic array usage
+; iii. Arithmetic examples using variables
+; iv. Script examples using variables
+; v. One-press macros 
+
+; Most of the previous tutorials have avoided using variables. But variables are going to
+; become essential from here onwards.
+;
+; A variable is an element used to store values (or numbers), so that they can be used later.
+; Variables are essential for writing more complex scripts, and ultimately - games!
+;
+
+
+; ------------------------------------------------------------------------------
+; Different types of variables:
+;
+; Catapult has several different types of variables, each of which has specific uses.
+;
+; - local variables are used within functions, to perform mathematical calculations.
+; - global variables are used by a project to store commonly used values over time.
+; - function variables are used as an interface for controller input.
+; - arrays are used to store large quantities of information, possibly in a complex structure. 
+
+
+; ------------------------------------------------------------------------------
+; Examining variables
+;
+; The value stored within a variable can be examined at any time. There are two ways to do this:
+;
+; 	- move the mouse cursor over the variable in question. A tooltip will appear, showing the value
+;		of the variable.
+;
+;	- open the "Watch" dialog (select "Watch" from the View menu, or press "control-1"). Through the 
+;		watch dialog, you can change the value of any variable at any time.
+
+
+
+; ------------------------------------------------------------------------------
+; *Local* variables:
+;
+; You have already come across functions. Quite often, you will need a function to carry 
+; out some sort of calculation that is only relevant within the function (i.e. once the function 
+; completes, you no longer care about these intermediate values). For this purpose, every 
+; function has its own set of LOCAL variables.
+;
+; Since local variables are specific to every function, once the function returns (or completes)
+; the values stored within these variables are lost (unless some are returned to the calling function).
+;
+; Local variables are signed 32bit variables - they can store large numbers, which can 
+; be negative or positive. (e.g. 100, -1000, 2000000)
+;
+; Local variables are NOT set to a fixed value when a function starts (i.e. it is wrong to 
+; assume that V_LV0 is set to 0 when a function begins..).
+;
+; 	- V_LV0, V_LV1, V_LV2, V_LV3, V_LV4, V_LV5 
+;		- these are general purpose variables. If a function is passed more than four parameters, these
+; 		additional parameters are stored in these variables (i.e. parameter five would be stored in V_LV0).
+;
+; 	- V_EV0, V_EV1, V_EV2, V_EV3 
+;		- the first four parameters passed to any function are stored in these variables.
+;
+;	- V_RV0, V_RV1, V_RV2, V_RV3
+;		- any parameters returned from any function called are stored in these variables.
+;
+; All of these local variables can be used in any type of operation (i.e. there are no restrictions).
+;
+
+; ------------------------------------------------------------------------------
+; (!!!) NOTE: Due to public demand, there are now shorter alias variable names for each of these:
+;
+; 	L0..L5 (V_LV0..V_LV5)
+; 	R0..R3 (V_RV0..V_RV3)
+; 	E0..E3 or P0..P3 (V_EV0..V_EV3)
+; 
+; Either variable name can be used, they are completely identical in function.
+
+
+; ------------------------------------------------------------------------------
+; One-press Macros
+;
+; Before we go any further, make sure you know about "One-press macros". These can save 
+; hours of effort!
+; 
+; Move down to the '###' below, and press 'Control-Shift-0' (all at the same time) - do it now!
+;
+; ####
+;
+; V_LV0 should have appeared! 
+;
+; The same key combination (but with a different number) generates each of the:
+;	-  V_LV0..V_LV5
+;	-  V_EV0..V_EV3
+;
+; The V_RV0..RV3 variables are generated through a slightly different combination:
+;
+;	-  'Control-ALT-0' (i.e. numbers 0..3)
+;
+
+
+; ------------------------------------------------------------------------------
+; *Global* variables:
+;
+; Local variables are great for intermediate calculations, but crummy for any sort of permanent 
+; storage.  When it comes to storing the state of a project between execution cycles, local 
+; variables are useless.
+;
+; Enter global variables! As the name suggests, global variables are persistent (i.e. their value is never lost).
+;
+; Globals can be used in any function, in any script. Globals variables can also be used in any 
+; circumstance, just like local variables.
+;
+; Global variables hold the same amount of information as local variables (e.g. they are also 32bit 
+; signed variables).
+;
+; Every project has 32 (and ONLY 32) global variables available.
+;
+; Global variables start out with boring names :
+; 	- G_VAR00, G_VAR01, ... G_VAR30, G_TICKS
+;
+; ..but you can change these to any name you want (all global names MUST begin with G_ !).
+;
+;
+; 1. Open the watch dialog (select "Watch" from the View menu, or press Control-1).
+;
+; 2. Select a global variable (click on one of the variables from the list).
+;	- The name and value of the variable will appear in the 'Name' and 'Value' edit boxes.
+;
+; 2. Rename the currently selected global variable, by changing its name in the edit box. 
+;	- Global variables must start with 'G_' (this will be added to the name automatically if necessary).
+;
+; 3. Change the value of the currently selected global variable, by entering a new value in the 'Value' editbox.
+;	- Normally, it is best to pause a project while changing a variable. It is difficult to change a global, at the
+;	same time that the executing project is changing it!
+;
+
+
+; ------------------------------------------------------------------------------
+; G_TICKS
+;
+; There is one special global, that cannot be renamed. The last global variable in the list (in every project) is 
+; called 'G_TICKS'. 
+;
+; This variable automatically is incremented every time a project execution cycle completes (i.e. a frame completes). 
+; It  is also set to zero every time the 'Initialise' function is called, effectively timing how long a program has been running.
+;
+; Because G_TICKS measures the flow of time, it very useful for animation and motion effects. More on this soon..
+;
+
+
+; ------------------------------------------------------------------------------
+; *Function* variables:
+;
+; Function variables are not really variables at all, they are special 'built-in' functions that can be conveniently
+; treated as variables. 
+;
+; Function variables always take no parameters, and return a single parameter. 
+; (This makes them effectively read-only variables, they are not used to store values).
+;
+; At present time, function variables are used for one thing only - reading Game Boy Advance input.
+;
+; (Of course a PC is not a GBA, so each of the GBAs inputs is mapped to a keyboard key - see Catapult Settings 
+; for the list of keys and mappings - you can remap the controls as you wish :> )
+;
+; There are three types of function variables, each of which applies to every GBA control button :
+;
+; 	F_IsButtonPressedxxx	: has a value of 0 if the button has not been *pressed*, value of 1 if it has been pressed
+; 	F_IsButtonHeldxxx		: has a value of 0 if the button is not currently being *held*, value of 1 if it is being held
+; 	F_IsButtonReleasedxxx	: has a value of 0 if the button has not been *released*, value of 1 if it has been released
+;
+; A button is *held*, if it is currently held down (without regards to WHEN it was held)
+; A button is *pressed*, if it has been pressed (i.e. tapped) since the last frame / cycle
+; A button is *released*, if it has been depressed (i.e. released) since the last frame / cycle
+;
+; All controls are sampled once per frame (i.e. 60times a second). This is more than sufficient for most GBA
+;  games/applications (a human is doing very well to tap a button 5-10 times a second!)
+;
+; The full list of button names can be found in the user guide (or the completion list). 
+;
+; Click the mouse at the end of the line below. Then click the right mouse button, and a completion list
+; will appear (this is a full list of all possible combinations, that start with the present text).
+;
+; 	F_IsButtonPressed
+;
+; Function variables are typically used in conjunction with an "IF" command, for example:
+;
+;	If F_IsButtonPressedStart == true
+;		; if the start button has been pressed, do this...
+;		; ....
+;	End
+;
+
+
+; ------------------------------------------------------------------------------
+; *Arrays* variables:
+;
+; Before array variables can be discussed, it is important to talk about arrays (as they have not been
+; touch upon yet).
+;
+; Arrays are setup through the array editor. Select "Arrays" from the Asset menu, or press Control-A.
+;
+; An array is a more sophisticated global variable. Instead of just storing a single value, it can have multiple "elements"
+; (or components) with each one storing a value.
+;
+; Unlike global or local variables, each array element has a "type". 
+; This "type" determines the range of values the element can store (and also determines how much memory the array uses!).
+;
+; Currently, these types are available:
+;
+;	- s8 (signed 8bit), -128..127 
+;	- u8 (unsigned 8bit), 0..255
+;	- s16 (signed 16bit), -32768..32767 
+;	- u16 (unsigned 16bit), 0..65535
+;	- s32 (signed 32bit), .. large numbers!
+;	- vector (three s32 variables)
+;	- matrix (twelve s32 variables) - (we will deal with these types MUCH later - they are specific to 3D)
+;
+; (The type is very important.. strange and bizarre errors can occur if the wrong type is chosen. For instance, 
+; assigning -1 to an array element that has type "u8", will actually store 255!)
+;
+;
+; To complicate things further, arrays don't just contain one of each element.. they can contain LOTS of 
+; each (i.e. like a list of items). Each item or "INSTANCE" of the array contains every defined element.
+;
+; It is up to the programmer to tell the array how many instances it should contain
+; 	(This is known as the X dimension of the array).
+;
+; This type of array is a one-dimensional array. Catapult also supports two dimensional arrays, but
+; we will deal with these later. 
+;
+
+
+; ------------------------------------------------------------------------------
+; Array Example
+;
+; For this example, we are going to create a simple array.
+;
+; Lets say a spaceship can fire 3 missiles at any time (take a look at the Copter project later..).
+; Each missile needs the following information to work properly:
+;
+; 	- Position (x, y coordinates)
+; 	- State (been fired, exploding, flying, idle)
+; 	- Type (what sort of missile, damage inflicted)
+;
+; Our array needs all of these elements, as well as an X dimension of three (for each missile).
+;
+; 1. Open the array editor.
+;
+; 2. Click on the 'New' button (to create a new array).
+;
+; 3. Enter 'MissileList' as the array name field.
+;
+; 4. Set the array type to 'One dimensional'.
+;
+; 5. Enter '3' in the 'Dim X' editbox. 
+;
+; Now, we have to create/setup each of the elements:
+;
+; 6. Click on the "Create/Duplicate" button (under elements). 
+;
+; 7. Enter "Type" in the elements 'Name' box (this will change the name of the current element).
+; 
+; 8. Change the element Type to "Unsigned 8 bit" (since there will only be a few types of missile, it only 
+;	requires a 8bit field, which can store up to 256 different values).
+;
+; 9. Repeat steps 6..8, for each of the following elements:
+;
+;	- Name "State", type "Unsigned 8bit"
+;	- Name "X", type "Signed 16bit" (this is the X coordinate of the missile)
+;	- Name "Y", type "Signed 16bit" (this is the Y coordinate of the missile)
+;;
+; Well done, you now have an array that can store the missile information we need.
+;
+; There should be 4 elements, and a X dimension of 3. 
+; You will notice that the array takes 18 bytes of memory. 6 bytes for each instance, *3 (for each missile) gives us 18 bytes.
+;
+;
+; Arrays can be manipulated through the "Array" commands. There are three types of array commands:
+;
+;	- General array commands, that apply to any type of array (i.e. ArrayGetSize)
+;	- one-dimensional array commands, that only apply to one-dimensional arrays (i.e. Array1DSort)
+;	- two-dimensional array commands, that only apply to two-dimensional arrays (i.e. Array2DFind)
+;
+; The full list of array commands can be found in the users guide. For a quick browse, do the same
+; command completion trick we did above, on the following line:
+;
+; Array
+
+
+
+; ------------------------------------------------------------------------------
+; Array variables:
+;
+; Now that we have briefly introduced arrays, we can talk about array variables.
+;
+; Unlike local and global variables, arrays CANNOT be used anywhere. Originally, they could only
+; be accessed through the specific array commands.. but this turned out to be extremely inefficient.
+;
+; Step in array variables...
+; 
+; An array variable, is a shortcut that allows one-dimensional arrays to be handled the same way that
+; other variables are treated.
+;
+; The general form for a array variable is :
+;
+; 	Array.Element[Index]
+;
+; To get the state of the first missile:
+;	MissileList.State[0]
+;
+; To get the position of the 3rd missile:
+;	MissileList.X[2]  ..or.. MissileList.Y[2]
+;
+; The index MUST be smaller than the X dimension of the array (i.e. if you tried to use 3 or higher 
+; 	(or a negative number) for the index, you would get a error).. i.e.:
+;
+;	MissileList.X[6] 		; illegal!
+
+; It is also possible to use another variable (i.e. a local or global variable - but NOT another array variable) 
+;	as the index. An example:
+;
+; 	V_LV0 = 1
+; 	MissileList.State[V_LV0] = ...
+;
+;
+; Like all commands and variables in the Catapult editor, an Array variable will be coloured the same as 
+; other variables when the format of the array variable is correct. If the colour is black (default colours anyway..), either the
+; spelling of the variable or some other error has occurred.
+; 
+; There are some internal Catapult limits for array variables. Only the first 256 arrays in a project can be
+; 	addressed as array variables, and only the first 256 elements of any array can be used. 
+;
+; This is a limit that will take a bit of work to break!!
+;
+
+
+; ==================================
+; Arithmetic examples:
+;
+; Variables on their own aren't very useful, without some arithmetic operations.. 
+;
+; Catapult supports all the standard arithmetic operations, and some more unusual ones.
+;
+; The variable on the left always receives the result of the operation. The parameters on
+; the right can either be variables, or immediates (i.e. numbers, values).
+
+; The following examples refer to the X position of the missile, since we created that element to
+; hold the missile's x position.  
+;
+; Literally, MissileList.x[0] refers to the value of the "X" element of array "MissileList" at index 0 when used as a variable.
+;
+; Examples :
+;
+
+	; *Equals*
+	V_LV0 = V_LV1			; V_LV0 takes the value of V_LV1
+	V_LV0 = 100				; V_LV0 takes the value of 100
+	MissileList.X[0] = 50		; The X position of the missile at index(0) takes the value of 50
+	G_STATE = #STATE_INIT	; Set the global variable 'state' to the definition '#STATE_INIT'
+	
+	; *Equals Negative*
+	V_LV0 =- V_LV1			; V_LV0 takes the negative value of V_LV1
+	V_LV0 =- 100				; V_LV0 takes the value of -100
+	MissileList.X[0] =- 50		; The X position of the missile at index(0) takes the value of -50
+	
+	; *Add*
+	V_LV0 += V_LV1			; V_LV0 increases by the value of V_LV1
+	V_LV0 += 100				; V_LV0 increases by 100
+	MissileList.X[0] += 5		; The X position of the missile at index(0) increases by 5
+	
+	; *Subtract*
+	V_LV0 -= V_LV1			; V_LV0 decreases by the value of V_LV1
+	V_LV0 -= 20				; V_LV0 decreases by 20
+	MissileList.X[0] -= 5		; The X position of the missile at index(0) decreases by 5
+	
+	; *Multiply*
+	V_LV0 *= V_LV1			; V_LV0 is multiplied by the value of V_LV1
+	V_LV0 *= 100				; V_LV0 is multiplied by 100
+	MissileList.X[0] *= V_LV0	; The X position of the missile at index(0) is multiplied by V_LV0
+	
+	; *Divide* - a divide by zero is trapped, and has no effect
+	V_LV0 /= V_LV1			; V_LV0 is the result of dividing V_LV0 by the value of V_LV1
+	V_LV0 /= 100				; V_LV0 is the result of dividing V_LV0 by 100
+	MissileList.X[0] /= 2		; The X position of the missile at index(0) is divided by 2
+	
+	; *Modulus/Remainder* - modulus of zero. returns zero
+	V_LV0 %= V_LV1			; V_LV0 is the remainder when V_LV0 is divided by the value of V_LV1
+	V_LV0 %= 100				; V_LV0 is the remainder when V_LV0 is divided by 100
+	
+	; *Binary OR*
+	V_LV0 |= V_LV1			; V_LV0 is the result of a binary OR of V_LV0 and V_LV1
+	V_LV0 |= 31				; V_LV0 is the result of a binary OR of V_LV0 and 31
+	
+	; *Binary AND*
+	V_LV0 &= V_LV1			; V_LV0 is the result of a binary AND of V_LV0 and V_LV1
+	V_LV0 &= 31				; V_LV0 is the result of a binary AND of V_LV0 and 31
+	
+	; *Binary XOR* - exclusive or
+	V_LV0 ^= V_LV1			; V_LV0 is the result of a binary XOR of V_LV0 and V_LV1
+	V_LV0 ^= 31				; V_LV0 is the result of a binary XOR of V_LV0 and 31
+	
+	; *Shift left* - each shift left multiplies by 2
+	V_LV0 <<= V_LV1			; V_LV0 is the result of shifting V_LV0 left by the value of V_LV1
+	V_LV0 <<= 3				; V_LV0 is the result of shifting V_LV0 left 3 times (multiply by 8)
+	
+	; *Shift right* - each shift right divides by 2 (this is a arithmetic shift right, which works with negative numbers)
+	V_LV0 <<= V_LV1			; V_LV0 is the result of shifting V_LV0 right by the value of V_LV1
+	V_LV0 <<= 3				; V_LV0 is the result of shifting V_LV0 right 3 times (divide by 8)
+	
+	; *Random*
+	V_LV0 ?= V_LV1			; V_LV0 is assigned a random value between 0 and the value of V_LV1-1
+	V_LV0 ?= 20				; V_LV0 is assigned a random value between 0 and 19 (never reaches 20)
+
+
+; ***
+;  It is important to remember that when you set an array variable equal to some other number or variable,
+;  you are acting DIRECTLY on the contents of the array!
+;  If you want the array contents to remain static, be sure to copy them to another variable and manipulate
+;  that instead.
+;
+; 	; correct usage:
+;  	V_LV0 = MissileList.x[1]
+;  	V_LV0 += 6 <---  The value of V_LV0 increases by 6 but the value of MissileList.x[1] is unaffected.
+;
+;	; ..use V_LV0 for something..
+;
+;
+; 	; incorrect usage:
+;  	MissileList.x[1] += 6			; permanently changes the value within the array
+;	V_LV0 = MissileList.x[1]
+;
+;	; ..use V_LV0 for something..
+
+
+
+; ==================================
+; Script examples
+;
+; Here are some more practical examples using variables :
+;
+;
+; Example to initialise a group of missiles. The outer loop counts from 0
+; to the missile count. V_LV0 contains the current missile ID, and is passed
+; to a child function which initialises each individual missile.
+;
+; (this script is an example only... it cannot be executed, nor does it do anything!)
+; 
+
+
+; =============================================================================================
+; --- definitions
+
+##MISSILE_COUNT		3
+
+
+; =============================================================================================
+; --- functions / code
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Initialise all missiles
+; 
+
+Function InitMissiles 0			; takes no parameters/arguments
+
+	V_LV0 = 0
+	While V_LV0 < #MISSILE_COUNT
+
+		Call InitialiseMissile V_LV0
+		V_LV0 += 1
+	End
+
+Return
+
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Initialise a SINGLE missile.
+; One parameter is passed to this function, which is passed through V_EV0.
+; A second parameter would be passed through V_EV1.
+;
+
+Function InitialiseMissile 1		; take one param - missile index
+
+	MissileList.State[V_EV0] = 0				; state for inactive
+	MissileList.X[V_EV0] = 20				; initial X position 
+	MissileList.Y[V_EV0] = 40				; initial Y position 
+
+Return
+
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; This function takes a slot x,y position, and returns a
+; adjusted screen pixel position. 
+;
+; Note that if one function returns a value (in V_RV0), that 
+; value must be copied to another variable if another 
+; function is going to return a value (otherwise the first
+; return value is lost!).
+; 
+
+Function CalcPixelXY 2			; X, Y slot position
+
+	; calc the x offset
+	Call CalculatePixel V_EV0	; the first parameter passed to CalcPixelXY is sent to function "CalculatePixel"
+	V_LV0 = V_RV0			; when "CalculatePixel" completes, modifies V_RV0 in *this* function.
+					; Copy return value elsewhere, or it will be lost when another 
+					; function is called which returns a variable.
+
+	; calc the y offset
+	Call CalculatePixel V_EV1
+
+Return V_LV0 V_RV0			; Return calc-ed X and Calc-ed Y	
+
+
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Given a pixel X,Y offset, calculate the tile position to 
+; place a tile
+;
+
+Function PlaceTile 3			; X,Y pixel position, sprite index
+
+	V_LV0 = V_EV0			;where a is the local variable V_LV0 and b is the first external variable V_EV0  
+	V_LV0 -= 40				;passed to this function, these three lines are the equivalent of
+	V_LV0 /= 8				; a = (b-40)/8
+
+	V_LV1 = V_EV1
+	V_LV1 -= 20
+	V_LV1 /= 6				; a = (b-20)/6
+
+	; modulus if useful to ensure a value is limited to with certain values (such as on the screen)
+	; If the modulus value is a power of 2, it is much faster to use a AND instead
+
+	V_LV0 %= 512				; sprites X position go up to 512
+	V_LV0 &= 511				; same as above, much faster
+
+	V_LV1 %= 256				; sprites Y position go up to 256
+	V_LV1 &= 255				; same as above, much faster
+
+	SpriteSetAttribute V_EV2 [Xpos] V_LV0	; Set sprite xpos
+	SpriteSetAttribute V_EV2 [Ypos] V_LV1	; Set sprite ypos
+
+Return
+

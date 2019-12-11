@@ -1,0 +1,53 @@
+;;; Catapult array script file - automatically generated
+;;; any changes made by hand will be lost
+
+
+#BarrelPos
+One dimensional
+6
+0
+$x
+16 bit signed
+$y
+16 bit signed
+*false
+RO
+#
+WorkRAM
+AnyAdd
+Array
+0
+0
+
+#Flower
+One dimensional
+16
+0
+$x
+16 bit signed
+$y
+16 bit signed
+*false
+RO
+#
+WorkRAM
+AnyAdd
+Array
+24
+0
+
+#Trig
+One dimensional
+256
+0
+$cos
+32 bit signed
+*false
+RO
+#
+WorkRAM
+AnyAdd
+Array
+88
+0
+

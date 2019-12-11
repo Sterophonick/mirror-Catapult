@@ -1,0 +1,1140 @@
+; =======================================================
+; $Source: N:\\REPOS/Current/Data/Catapult/copter/Script/copter.txt,v $
+; $Date: 2003/03/14 03:39:26 $
+; $Revision: 1.1 $
+; =======================================================
+;
+; 
+; Control and rendering of the copter/jet thingy
+;
+
+##COPTER_START_LIVES	4
+
+; ==== External Functions ========================================================
+ExternFunction "collide.txt" Collide_SpriteVrsTiles
+ExternFunction "explosions.txt" Explosion_Create
+
+ExternFunction "objects.txt" Object_IsCollide
+ExternFunction "objects.txt" Object_Damage
+
+ExternFunction "terrain" Terrain_GenerateFromCheckpoint
+
+; --- transitions
+ExternFunction "Transitions.txt" Transition_Initialise
+ExternFunction "Transitions.txt" Transition_FadeToBlackStart
+ExternFunction "Transitions.txt" Transition_FadeFromBlackStart
+ExternFunction "Transitions.txt" Transition_IsActive
+ExternFunction "Transitions.txt" Transition_Continue
+
+; --- end level
+ExternFunction "end_level" EndLevel_Display
+ExternFunction "end_level" EndLevel_AddBonus
+ExternFunction "end_level" EndLevel_Finish
+ExternFunction "main" GameState_SetFinished
+
+
+; ==== Explosion frame list for copter ===============================================
+
+; gfx not finalised, use later
+TableDefine EXPLODE_FRAMES 0 id
+
+; table is just used for timing (at the moment..)
+TableData	0
+TableData	0
+TableData	0
+TableData	0
+TableData	0
+TableData	0
+TableData	0
+TableData	0
+TableData	0
+TableData	0
+
+Tabledata	-1
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Process all copter render events during a frame
+; It is important to setup the HBlank globals
+; before the first hblank can occur!
+;
+
+Function Copter_FrameTick 0
+
+	; make the palette entry for power glow
+	V_LV0 Bounce G_TICKS 31
+	PaletteSetG [bg] 227 V_LV0
+	PaletteSetR [bg] 227 V_LV0
+	PaletteSetB [bg] 227 V_LV0+16
+	
+	; make the bombs sway
+	V_LV0 = G_TICKS
+	V_LV0 >>= 1
+	; make the bombs sway back and forth
+	V_LV0 Bounce V_LV0 15
+
+	; straight
+	V_LV0 -= 4
+	V_LV0 &= 255					; convert to angle
+	RotateAndScale 27 V_LV0 256
+	
+	V_LV0 -= 16
+	V_LV0 &= 255					; convert to angle
+	RotateAndScale 28 V_LV0 256
+
+	V_LV0 += 32
+	V_LV0 &= 255					; convert to angle
+	RotateAndScale 29 V_LV0 256
+
+	; --- setup coords for window A (flashlight effect)
+	; x coords are set by the hblank cb
+	V_LV0 Min 255 G_COPTERY+18
+	DisplaySetWindowRegion 0 0 V_LV0 240 160
+	
+	; setup 'inc' values to get nice sweeping light effect (8bit precision)
+	V_LV0 Bounce G_TICKS 63
+;	V_LV0 >>= 1
+
+	; adjust tilt of light as copter tilts..
+	If F_IsButtonHeldPadRight == true
+		G_LIGHT1_INC = 70
+		G_LIGHT2_INC = 150
+	ElseIf F_IsButtonHeldPadLeft == true
+		G_LIGHT1_INC = 130
+		G_LIGHT2_INC = 210
+	Else
+		G_LIGHT1_INC = 100
+		G_LIGHT2_INC = 180
+	End
+			
+	G_LIGHT1_INC += V_LV0*2
+	G_LIGHT2_INC += V_LV0*2
+
+	G_INITLIGHT = true
+	
+	; initial acc values setup in hblank
+	
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Process all copter non-render events during a frame
+;
+
+Function Copter_ProcessTick 0
+
+	; copter events
+	if G_COPTERSTATE == #PLAYER_STATE_FLYING
+		Call Copter_Control
+		Call CheckCopterCollide
+
+	Elseif G_COPTERSTATE == #PLAYER_STATE_CRASHING
+		Call MakeCopterCrash
+
+	Elseif G_COPTERSTATE == #PLAYER_STATE_INTRO
+		Call FollowIntroPath
+		
+	Elseif G_COPTERSTATE == #PLAYER_STATE_OUTRO
+		If G_OUTRO_TIMER == 0
+			; finished level - play outro
+			G_LEVEL_BONUS  = 1000		; flat bonus for base levels
+			Call FollowOutroPath
+		Else
+			G_OUTRO_TIMER -= 1
+			CopterInfo.Timer = 0
+
+			; still in play
+			Call Copter_Control
+			Call CheckCopterCollide
+		End
+
+	Elseif G_COPTERSTATE == #PLAYER_STATE_FINISHED
+		; finish demo - report score, add bonus
+		Call EndLevel_Display
+		If G_TICKS&3 == 0
+			Call EndLevel_AddBonus
+			If V_RV0 == true
+				; finished
+				Call EndLevel_Finish
+				Call GameState_SetFinished
+				Return
+			End
+		End
+	End
+		
+	Call SetCopterAnimation
+	
+	; missile events
+	call TickMissile 0			
+	call TickMissile 1
+	
+	; bomb events
+	call TickBomb 0
+	call TickBomb 1
+	call TickBomb 2
+	
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Return true if the point passed is within the searchlight
+; region
+;
+
+Function Copter_IsPointInSearchlight 2		; x, y
+
+	if G_SEARCHLIGHT_ON == false
+		Return false
+	End
+
+	If V_EV1 < G_COPTERY+15
+		Return false
+	End
+
+	V_EV1 -= 	G_COPTERY+15
+	
+	; calc x start/end for light at this y
+	V_LV0 = G_COPTERX+30
+	V_LV0 <<= 8
+	V_LV1 = G_COPTERX+32
+	V_LV1 <<= 8
+
+	V_LV2 = G_LIGHT1_INC
+	V_LV2 *= V_EV1
+	V_LV0 += V_LV2
+
+	V_LV2 = G_LIGHT2_INC
+	V_LV2 *= V_EV1
+	V_LV1 += V_LV2
+	
+	; convert to pixels
+	V_LV0 >>= 8
+	V_LV1 >>= 8
+	
+	; within region?
+	If V_EV0 >=< V_LV0 V_LV1
+		Return true
+	End
+
+Return false
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Change the x coords in window A during the Hblank CB
+; to shape the flashlight
+;
+
+Function Copter_HBlankCB 1		; line id
+
+	; search light active?
+	if G_SEARCHLIGHT_ON == false
+		Return
+	End
+	
+	; setup initial acc values
+	If G_INITLIGHT == true
+		G_LIGHT1_ACC = G_COPTERX+30
+		G_LIGHT1_ACC <<= 8
+	
+		G_LIGHT2_ACC = G_COPTERX+32
+		G_LIGHT2_ACC <<= 8
+		
+		G_INITLIGHT = false
+	End	
+
+	If V_EV0 < G_COPTERY+15
+		Return
+	End
+	
+	; calc new x values
+	G_LIGHT1_ACC += G_LIGHT1_INC
+	G_LIGHT2_ACC += G_LIGHT2_INC
+
+	V_LV0 = G_LIGHT1_ACC
+	V_LV0 >>= 8
+
+	V_LV1 = G_LIGHT2_ACC
+	V_LV1 >>= 8
+		
+	; clip to screen edge	
+	V_LV0 Min V_LV0 240
+	V_LV1 Min V_LV1 240
+	
+	; only update the x coords
+	DisplaySetWindowRegion 0 V_LV0 -1 V_LV1 -1
+	
+	; add 'levels' to the light effect
+	V_LV0 = V_EV0
+	V_LV0 -= G_COPTERY+15
+	If V_LV0&15 == 0
+		V_LV0 >>= 4
+		V_LV0 =- V_LV0-9
+		V_LV0 Max 0 V_LV0
+		DisplaySetBlendTintLevel V_LV0
+	End
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Add points to the players score
+;
+
+Function Copter_AddPoints 1		; points
+
+	G_SCORE += V_EV0
+	Call DisplayScore
+
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Add power to the players power meter. If the power
+; meter is maxed out, a new powerup is gained
+;
+
+Function Copter_AddPower 1		; power
+
+	SoundPlay RID_SFX_POWERUP
+	CopterInfo.PowerCurrent += V_EV0
+	CopterInfo.PowerCurrent Min CopterInfo.PowerMax CopterInfo.PowerCurrent
+	Call RefreshPowerLevel
+
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Jet control function - move the jet around, and fire
+; weapons (etc..)
+; 
+
+Function Copter_Control	0
+
+	; form a change in position vector
+	V_LV0 = 0
+	V_LV1 = 0
+
+	; tile copter, based on movement	
+	RotateAndScale 30 0 256
+
+	If F_IsButtonHeldPadUp == true
+		If G_COPTERY > 2
+			V_LV1 -= #MOVE_SPEED
+		End
+	End
+	
+	If F_IsButtonHeldPadDown == true
+		If G_COPTERY < 120
+			V_LV1 += #MOVE_SPEED
+		End
+	End
+	
+	If F_IsButtonHeldPadLeft == true
+		RotateAndScale 30 2 256
+		If G_COPTERX > 5
+			V_LV0 -= #MOVE_SPEED
+		End
+	End
+	
+	If F_IsButtonHeldPadRight == true
+		RotateAndScale 30 254 256
+		If G_COPTERX < 195
+			V_LV0 += #MOVE_SPEED
+		End
+	End
+	
+	; adjust sprite position
+	G_COPTERX += V_LV0
+	G_COPTERY += V_LV1
+	
+	; TBD : handle clipping?
+	%SPRITESHOW_ROTNOFOLD #SIX_COPTER
+	%SpriteMove #SIX_COPTER G_COPTERX G_COPTERY
+	
+	; --- adjust firing timing
+	If F_IsButtonHeldButtonA == false
+		; reset shoot timer
+		G_SHOOT_TIMER = 0
+	Else
+		G_SHOOT_TIMER += 1
+	End
+
+	If F_IsButtonHeldButtonB == false
+		; reset bomb timer
+		G_BOMB_TIMER = 0
+	Else
+		G_BOMB_TIMER += 1
+	End
+	
+	; --- shooting?
+	If F_IsButtonPressedButtonA == true
+		; pressed
+		Call Copter_CanFireMissile 1
+		If V_RV0 != 0
+			Call Copter_FireMissile V_RV0-1
+		End
+	ElseIf F_IsButtonHeldButtonA == true
+		; autofire?
+		If CopterInfo.PowerCurrent > 1
+			If G_SHOOT_TIMER > 20
+				; time to shoot
+				Call Copter_CanFireMissile 5
+				If V_RV0 != 0
+					Call Copter_FireMissile V_RV0-1
+				End
+			
+				G_SHOOT_TIMER -= 4		; determines autofire rate
+				CopterInfo.PowerCurrent -= 1
+				Call RefreshPowerLevel
+			End
+		Else
+			G_SHOOT_TIMER = 0
+		End
+	End
+  	
+	; drop a bomb? (b button)
+	If F_IsButtonReleasedButtonB == true
+		If G_BOMB_TIMER < 40
+			Call Copter_CanDropBomb 1
+			If V_RV0 != 0
+				Call Copter_DropBomb V_RV0-1 0
+			End
+		End
+	ElseIf F_IsButtonHeldButtonB == true
+		; triple bomb?
+		If CopterInfo.PowerCurrent > 5
+			If G_BOMB_TIMER > 40
+				
+				; create up to three bombs at once
+				; bomb two
+				Call Copter_CanDropBomb 3
+				If V_RV0 != 0
+					Call Copter_DropBomb V_RV0-1 1
+				End
+
+				; bomb three
+				Call Copter_CanDropBomb 3
+				If V_RV0 != 0
+					Call Copter_DropBomb V_RV0-1 2
+				End
+
+				; bomb one
+				Call Copter_CanDropBomb 3
+				If V_RV0 != 0
+					Call Copter_DropBomb V_RV0-1 0
+				End
+
+				G_BOMB_TIMER -= 30			; determines bombing rate
+				CopterInfo.PowerCurrent -= 5
+				Call RefreshPowerLevel
+			End
+		Else
+			G_BOMB_TIMER = 0
+		End
+	End
+	
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Return index+1 if there are any bomb slots left to be filled
+; (i.e. another bomb can be dropped). Otherwise returns false
+;
+
+Function Copter_CanDropBomb 1	; max number allowed
+
+	If BOMB_LIST.state[0] == #BOMB_STATE_IDLE
+		Return 1
+	End
+	
+	If V_EV0 == 1
+		Return false
+	end
+	
+	If BOMB_LIST.state[1] == #BOMB_STATE_IDLE
+		Return 2
+	End
+
+	If V_EV0 == 2
+		Return false
+	end
+
+	If BOMB_LIST.state[2] == #BOMB_STATE_IDLE
+		Return 3
+	End
+	
+Return false
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Return index+1 if there are any missile slots left to be filled
+; (i.e. another missile can be fired)
+;
+
+Function Copter_CanFireMissile 1		; max number allowed
+
+	If MISSILE_LIST.state[0] == #MISSILE_STATE_IDLE
+		Return 1
+	End
+
+	If V_EV0 == 1
+		Return false
+	end
+	
+;	if CopterInfo.PowerUps < #POWERUP_ID_GUN2
+;		Return false
+;	End
+	
+	If MISSILE_LIST.state[1] == #MISSILE_STATE_IDLE
+		Return 2
+	End
+	
+Return false
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Drop a new bomb - starts from the position of the copter
+; with a offset. Pass the bomb offset to use.
+;
+
+Function Copter_DropBomb 2			; index of bomb array to use, direction (0,1,2)
+
+	Assert V_EV1 <= 2
+	
+	V_LV0 = G_COPTERX
+	V_LV1 = G_COPTERY
+	
+	; add offset?
+	V_LV0 += 22
+	V_LV1 += 5
+	
+	; set state & position
+	BOMB_LIST.state[V_EV0] = #BOMB_STATE_FALLING
+	BOMB_LIST.x[V_EV0] = V_LV0
+	BOMB_LIST.y[V_EV0] = V_LV1
+	BOMB_LIST.rot_index[V_EV0] = V_EV1
+	
+	; show bomb
+	%SPRITESHOW_ROT BOMB_LIST.sprite[V_EV0]
+	SpriteSetAttribute BOMB_LIST.sprite[V_EV0] [RotationIndex] V_EV1+27
+
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Fire a new missile - starts from the position of the copter
+; with a offset. Pass the bomb offset to use.
+;
+
+Function Copter_FireMissile 1			; index of bomb array to use
+
+	V_LV0 = G_COPTERX
+	V_LV1 = G_COPTERY
+	
+	; add offset?
+	V_LV0 += 35
+	V_LV1 += 14
+	
+	; set state & position
+	MISSILE_LIST.state[V_EV0] = #MISSILE_STATE_MOVING
+	MISSILE_LIST.x[V_EV0] = V_LV0
+	MISSILE_LIST.y[V_EV0] = V_LV1
+	
+	; show MISSILE
+	%SpriteShow_NonRot MISSILE_LIST.sprite[V_EV0]
+
+	; play bullet sound!
+	SoundPlay RID_SFX_BULLET1	
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Initialise any special fields in the missile/bomb arrays
+; Happens once at game startup
+;
+
+Function Copter_Initialise 0
+
+	; setup copter position/state
+	G_COPTERX = 10
+	G_COPTERY = 10
+	G_EXPLODEINDEX = 0
+	G_COPTERSTATE = #PLAYER_STATE_INTRO
+	G_LIFECOUNT = #COPTER_START_LIVES
+	G_SCORE = 0
+	
+	CopterInfo.PowerCurrent = 0
+	CopterInfo.PowerMax 	= 200		; store a lot of energy - increases for later levels
+	CopterInfo.Timer		= 0
+;	CopterInfo.PowerUps	= 0			; not used for now
+	
+	; setup sprite/state indexes as part of bomb/missile arrays
+	Array1DSetElement BOMB_LIST.sprite 0 #SIX_BOMB1
+	Array1DSetElement BOMB_LIST.sprite 1 #SIX_BOMB2
+	Array1DSetElement BOMB_LIST.sprite 2 #SIX_BOMB3
+	Array1DSetElement BOMB_LIST.state 0 #BOMB_STATE_IDLE
+	Array1DSetElement BOMB_LIST.state 1 #BOMB_STATE_IDLE
+	Array1DSetElement BOMB_LIST.state 2 #BOMB_STATE_IDLE
+	
+	Array1DSetElement MISSILE_LIST.sprite 0 #SIX_MISSILE1
+	Array1DSetElement MISSILE_LIST.sprite 1 #SIX_MISSILE2
+	Array1DSetElement MISSILE_LIST.state 0 #MISSILE_STATE_IDLE
+	Array1DSetElement MISSILE_LIST.state 1 #MISSILE_STATE_IDLE
+	
+	; initialise copter sprites
+	%SpriteHide #SIX_COPTER
+	%SpriteSize_64x32 #SIX_COPTER
+;	SpriteSetAttribute #SIX_COPTER [FlipHorizontal] false
+;	SpriteSetAttribute #SIX_COPTER [FlipVertical] false
+	SpriteSetAttribute #SIX_COPTER [PaletteIndex] #PIX_COPTER
+	SpriteSetAttribute #SIX_COPTER [RenderLayer] 1					; under explosions
+	SpriteSetAttribute #SIX_COPTER [RotationIndex] 30				; use 2nd last rot bank
+	SpriteSetAttribute #SIX_COPTER [SdFold] false					; no need?
+	
+	; initialise bomb/missile sprites
+	TileDataLoad [sprite] RID_IMAGE_COPTER_BOMB #TIX_BOMB 0
+	TileDataLoad [sprite] RID_IMAGE_COPTER_MISSILE #TIX_MISSILE 0
+;	TileDataLoad [sprite] RID_IMAGE_COPTER_EXPLODE #TIX_COPTER_EXPLODE_1 0
+	
+	; load icon for lives
+	TileDataLoad [bg] RID_IMAGE_COPTER_LIFE #TIX_CHOPPER_LIVES 0
+
+	; load tiles for power meter
+	TileDataLoad [bg] RID_IMAGE_POWER_METER #TIX_POWER_METER 0
+
+	%SpriteHide  #SIX_BOMB1
+	%SpriteHide  #SIX_BOMB2
+	%SpriteHide  #SIX_BOMB3
+	
+	%SpriteHide  #SIX_MISSILE1
+	%SpriteHide  #SIX_MISSILE2
+	
+	SpriteSetAttribute #SIX_BOMB1 [TileIndex] #TIX_BOMB
+	SpriteSetAttribute #SIX_BOMB2 [TileIndex] #TIX_BOMB
+	SpriteSetAttribute #SIX_BOMB3 [TileIndex] #TIX_BOMB
+
+	%SPRITESIZE_16X32 #SIX_BOMB1
+	%SPRITESIZE_16X32 #SIX_BOMB2
+	%SPRITESIZE_16X32 #SIX_BOMB3
+	
+	SpriteSetAttribute #SIX_MISSILE1 [TileIndex] #TIX_MISSILE
+	SpriteSetAttribute #SIX_MISSILE2 [TileIndex] #TIX_MISSILE
+	%SPRITESIZE_8X8 #SIX_MISSILE1
+	%SPRITESIZE_8X8 #SIX_MISSILE2
+	SpriteSetAttribute #SIX_MISSILE1 [FlipHorizontal] true
+	SpriteSetAttribute #SIX_MISSILE2 [FlipHorizontal] true
+	
+	; bombs use pal 1
+	SpriteSetAttribute #SIX_BOMB1 [PaletteIndex] 1
+	SpriteSetAttribute #SIX_BOMB2 [PaletteIndex] 1
+	SpriteSetAttribute #SIX_BOMB3 [PaletteIndex] 1
+	
+	; missiles use pal 2
+	SpriteSetAttribute #SIX_MISSILE1 [PaletteIndex] 2
+	SpriteSetAttribute #SIX_MISSILE2 [PaletteIndex] 2
+	
+	; load copter tiles into memory
+	TileDataLoad [sprite] RID_IMAGE_COPTER_IDLE_1 #TIX_COPTER_IDLE_1 0
+	TileDataLoad [sprite] RID_IMAGE_COPTER_IDLE_2 #TIX_COPTER_IDLE_2 0
+	TileDataLoad [sprite] RID_IMAGE_COPTER_IDLE_3 #TIX_COPTER_IDLE_3 0
+	
+	; change green colour index (1) to 0 (for now - fix art later?)
+	;TileDataChangeColour [sprite] 0 #TIX_COPTER_IDLE_1 223 1 0
+	
+	; load copter palette into memory
+	PaletteLoad [sprite] RID_PAL_COPTER #PIX_COPTER
+	
+	; load bomb palette into memory
+	PaletteLoad [sprite] RID_PAL_BOMB #PIX_BOMB
+	
+	; load missile palette into memory
+	PaletteLoad [sprite] RID_PAL_MISSILE #PIX_MISSILE
+
+	; Display lives remaining
+	Call DisplayLivesRemaining
+
+	; Display score
+	Call DisplayScore
+
+	; Display power meter
+	Call DisplayPowerMeter
+	Call RefreshPowerLevel
+	
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Setup the chopper searchlight
+; 
+
+Function Copter_SetupLight 0
+
+	; activate HBlank routine
+;	If CopterInfo.PowerUps == 0
+;		G_SEARCHLIGHT_ON = false
+;	Else
+		G_SEARCHLIGHT_ON = true
+;	End
+
+	; --- setup blend modes for 'flashlight' copter effect
+	; lighten blend mode
+	DisplaySetBlendMode 2
+
+	; which layers does the light appear on top of
+	DisplaySetBlendAttribute [BG0Source] 0			; hud - no
+	DisplaySetBlendAttribute [BG1Source] 0			; terrain - no
+	DisplaySetBlendAttribute [BG2Source] 1			; background hills - yes
+	DisplaySetBlendAttribute [BG3Source] 1			; sky - yes
+	DisplaySetBlendAttribute [SpriteSource] 1			; sprites - yes
+	
+	; use window A for the region (others off)
+	DisplaySetAttribute [EnableWindowA] 1
+	DisplaySetAttribute [EnableWindowB] 0
+	DisplaySetAttribute [EnableSpriteWindow] 0
+	
+	; enable all layers to display in window A - and blends
+	DisplaySetWindowAttribute 0 [WindowBG0] 1
+	DisplaySetWindowAttribute 0 [WindowBG1] 1
+	DisplaySetWindowAttribute 0 [WindowBG2] 1
+	DisplaySetWindowAttribute 0 [WindowBG3] 1
+	DisplaySetWindowAttribute 0 [WindowBlends] 1
+	DisplaySetWindowAttribute 0 [WindowSprites] 1
+
+	; enable all layers - except blends - in outside window
+	DisplaySetWindowAttribute 2 [WindowBG0] 1
+	DisplaySetWindowAttribute 2 [WindowBG1] 1
+	DisplaySetWindowAttribute 2 [WindowBG2] 1
+	DisplaySetWindowAttribute 2 [WindowBG3] 1
+	DisplaySetWindowAttribute 2 [WindowBlends] 0
+	DisplaySetWindowAttribute 2 [WindowSprites] 1
+
+Return
+
+; === Local functions only ========================================================================
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Copter flies onto the screen, following the intro path
+; 
+
+Function FollowIntroPath 0	; Copter follows intro path
+
+	; finished?
+	PathGetLength PATH_COPTER_FLYIN V_LV0
+	If CopterInfo.Timer >= V_LV0
+		; switch state..
+		G_COPTERSTATE = #PLAYER_STATE_FLYING
+		Return
+	End
+	
+	; follow path
+	PathGetPos PATH_COPTER_FLYIN CopterInfo.Timer G_COPTERX G_COPTERY
+	CopterInfo.Timer += 1
+
+	%SPRITESHOW_ROTNOFOLD #SIX_COPTER
+	%SpriteMove #SIX_COPTER G_COPTERX G_COPTERY
+	RotateAndScale 30 0 256
+
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Copter flies off screen, following the outro path
+; path is relative to current position
+; 
+
+Function FollowOutroPath 0	; Copter follows outro path
+
+	; finished?
+	PathGetLength PATH_COPTER_OUTRO V_LV0
+	If CopterInfo.Timer >= V_LV0
+		; switch state..
+		G_COPTERSTATE = #PLAYER_STATE_FINISHED
+		
+		; delay before points tick down
+		G_OUTRO_TIMER = 20
+		Return
+	End
+	
+	; use path as 'difference' path, so it works from any position on the screen
+	PathGetPos PATH_COPTER_OUTRO CopterInfo.Timer V_LV0 V_LV1
+	CopterInfo.Timer += 1
+	PathGetPos PATH_COPTER_OUTRO CopterInfo.Timer V_LV2 V_LV3
+	V_LV2 -= V_LV0
+	V_LV3 -= V_LV1
+	G_COPTERX += V_LV2
+	G_COPTERY += V_LV3
+
+	%SPRITESHOW_ROTNOFOLD #SIX_COPTER
+	%SpriteMove #SIX_COPTER G_COPTERX G_COPTERY
+	RotateAndScale 30 0 256
+
+Return
+
+
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Display icons for the number of lives remaining for the
+; copter
+;
+
+Function DisplayLivesRemaining 0
+
+	; display text
+	StringDisplay 0 0 SID_LIVES
+
+	; display life icons
+	V_LV0 = 0
+	V_LV1 = 6
+
+	While V_LV0 < #COPTER_START_LIVES
+
+		If V_LV0 < G_LIFECOUNT
+			TileMapSetAttribute #LID_HUD V_LV1 0 [All] #TIX_CHOPPER_LIVES
+		Else
+			TileMapSetAttribute #LID_HUD V_LV1 0 [All] 0		; blank tile
+		End
+
+		V_LV1 += 1
+		V_LV0 += 1
+	End
+
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Display the players score 
+;
+
+Function DisplayScore 0
+
+	; display text
+	StringDisplay 18 0 SID_SCORE
+
+	; display score
+	StringDisplayValue 29 0 5 G_SCORE
+
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Draw the tiles for the power meter
+;
+
+Function DisplayPowerMeter 0
+
+	; combine tile and palette index into 1 value
+	V_LV0 = 14
+	V_LV0 <<= #_TILEMAP_PAL_SHIFT
+	V_LV0 |= #TIX_POWER_METER
+	
+	; start y position
+	V_LV1 = 13
+
+	; 4 tiles, 1 under each other	
+	TileMapSetAttribute  #LID_HUD 1 V_LV1+0 [All] V_LV0
+	TileMapSetAttribute  #LID_HUD 1 V_LV1+1 [All] V_LV0+1
+	TileMapSetAttribute  #LID_HUD 1 V_LV1+2 [All] V_LV0+2
+	TileMapSetAttribute  #LID_HUD 1 V_LV1+3 [All] V_LV0+3
+
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Fill up part of the power meter, based on how much
+; power has been collected
+;
+
+Function RefreshPowerLevel 0
+
+	V_LV0 = CopterInfo.PowerCurrent
+	V_LV0 *= 28						; num of pixels in the power meter to fill
+	V_LV0 /= CopterInfo.PowerMax
+	
+	Assert V_LV0 <= 28
+	
+	; top tile
+	if V_LV0 > 22
+		V_LV1 = 30
+		V_LV1 -= V_LV0
+		TileDataCopyPartialTile [bg] [bg] #_COL_16 #TIX_POWER_METER+4 #TIX_POWER_METER 2 2 V_LV1 0
+	End
+
+	; middle tiles
+	if V_LV0 > 14
+		V_LV1 = 22
+		V_LV1 -= V_LV0
+		V_LV1 Max 0 V_LV1
+		TileDataCopyPartialTile [bg] [bg] #_COL_16 #TIX_POWER_METER+5 #TIX_POWER_METER+1 2 2 V_LV1 0
+	End
+
+	if V_LV0 > 6
+		V_LV1 = 14
+		V_LV1 -= V_LV0
+		V_LV1 Max 0 V_LV1
+		TileDataCopyPartialTile [bg] [bg] #_COL_16 #TIX_POWER_METER+6 #TIX_POWER_METER+2 2 2 V_LV1 0
+	End
+
+	; bottom tile
+	V_LV1 = 6
+	V_LV1 -= V_LV0
+	V_LV1 Max 0 V_LV1
+	TileDataCopyPartialTile [bg] [bg] #_COL_16 #TIX_POWER_METER+7 #TIX_POWER_METER+3 2 2 V_LV1 2
+
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Set the correct sprite tile index for the copter based
+; on state and animation timing
+;
+
+Function SetCopterAnimation 0
+
+	; slow anim down
+	V_LV0 = G_TICKS
+	V_LV0 >>= 1
+	
+	; chopper blowing up?
+	if G_COPTERSTATE == #PLAYER_STATE_CRASHING
+	
+		; fade out transition? (after death)
+		Call Transition_IsActive
+		If V_RV0 == true
+			Call Transition_Continue
+
+			; finished? reset chopper
+			Call Transition_IsActive
+			If V_RV0 == false
+				; lose life now (negative, game state changes)
+				G_LIFECOUNT -= 1
+				Call DisplayLivesRemaining
+				Call ResetChopper
+				
+				; generate new terrain now that screen is black
+				Call Terrain_GenerateFromCheckpoint
+				Call Transition_FadeFromBlackStart
+			End
+		Else
+			; get tile index from anim array
+			Array1DGetElement EXPLODE_FRAMES.id G_EXPLODEINDEX V_LV1
+			If V_LV1 == -1
+				; start transition to black
+				Call Transition_FadeToBlackStart false
+			Else
+				; play random explosions 
+				V_LV2 ?= 32
+				V_LV2 += G_COPTERX+16
+	
+				V_LV3 ?= 32
+				V_LV3 += G_COPTERY+16
+	
+				Call Explosion_Create V_LV2 V_LV3
+	
+				; next frame
+				If V_LV0 %= 4
+					G_EXPLODEINDEX += 1
+				End
+			End
+		End
+	End
+	
+	; 4 animation frames
+	V_LV0 &= 3
+	If V_LV0 == 0
+		SpriteSetAttribute #SIX_COPTER [TileIndex] #TIX_COPTER_IDLE_1
+	ElseIf V_LV0 == 2
+		SpriteSetAttribute #SIX_COPTER [TileIndex] #TIX_COPTER_IDLE_3
+	Else
+		SpriteSetAttribute #SIX_COPTER [TileIndex] #TIX_COPTER_IDLE_2
+	End
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Check for a collision of the chopper with something
+;
+
+Function CheckCopterCollide 0
+
+	; check for collision against objects
+	Call Object_IsCollide G_COPTERX+5 G_COPTERY+2 37 18 0
+
+	If V_RV0 > 0
+		Call ChopperKill
+		Return
+	End
+
+	; test against terrain
+	CallRet Collide_SpriteVrsTiles G_COPTERX+5 G_COPTERY+2 37 18
+	
+	; hit!
+	Call ChopperKill
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Kill the chopper - lose a life!
+;
+
+Function ChopperKill 0
+
+	G_COPTERSTATE = #PLAYER_STATE_CRASHING
+	G_EXPLODEINDEX = 0
+	
+	; lose any power gained
+	TileDataLoad [bg] RID_IMAGE_POWER_METER #TIX_POWER_METER 0
+	CopterInfo.PowerCurrent = 0
+	
+	; turn off searchlight
+	G_SEARCHLIGHT_ON = false
+	DisplaySetBlendMode 0
+
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; The chopper is crashing - drop its height
+;
+
+Function MakeCopterCrash 0
+
+	G_COPTERX += 2
+	G_COPTERY += 2
+	
+;	%SpriteShow_NonRot #SIX_COPTER
+	V_LV0 Min 255 G_COPTERY
+	%SpriteMove #SIX_COPTER G_COPTERX V_LV0
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Reset the chopper back to normal after a crash
+;
+
+Function ResetChopper 0
+
+	G_COPTERSTATE = #PLAYER_STATE_INTRO
+	CopterInfo.Timer = 0
+	
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Process missile movement/action every frame
+;
+
+Function TickMissile 1			; index of missile to tick
+
+	; missile active?
+	Array1DGetElement MISSILE_LIST.state V_EV0 V_LV0
+	If V_LV0 == #MISSILE_STATE_IDLE
+		Return
+	End
+	
+	; moving?
+	If V_LV0 == #MISSILE_STATE_MOVING
+		; move missile
+		MISSILE_LIST.x[V_EV0] += 13
+	
+		; get sprite from array
+		Array1DGetElement  MISSILE_LIST.sprite V_EV0 V_LV2
+	
+		; grab values for buffering
+		Array1DGetElement MISSILE_LIST.x V_EV0 V_LV0
+		Array1DGetElement MISSILE_LIST.y V_EV0 V_LV1
+	
+		; update sprite position (after vanish checks)
+		%SPRITEMOVE V_LV2 V_LV0 V_LV1
+	
+		; off screen?
+		If V_LV0 > 240
+			Array1DSetElement MISSILE_LIST.state V_EV0 #MISSILE_STATE_IDLE
+			%SpriteHide V_LV2
+			Return
+		End
+	
+		; Collide vrs objects?
+		call Object_IsCollide V_LV0 V_LV1 8 8 0
+		If V_RV0 > 0
+			call Object_Damage V_RV0-1 1
+			Array1DSetElement MISSILE_LIST.state V_EV0 #MISSILE_STATE_IDLE
+			%SpriteHide V_LV2
+			
+			Return
+		End
+	
+		; Collide vrs walls?
+		CallRet Collide_SpriteVrsTiles V_LV0 V_LV1 8 8
+
+		; Yes!
+		Array1DSetElement MISSILE_LIST.state V_EV0 #MISSILE_STATE_IDLE
+		%SpriteHide V_LV2
+	
+		; Bang!
+		call Explosion_Create V_LV0 V_LV1
+	
+		Return
+	End
+	; blowing up
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Process bomb movement/action every frame
+;
+
+Function TickBomb 1			; index of bomb to tick
+
+	; bomb active?
+	Array1DGetElement BOMB_LIST.state V_EV0 V_LV0
+	If V_LV0 == #BOMB_STATE_IDLE
+		Return
+	End
+	
+	; moving?
+	If V_LV0 == #BOMB_STATE_FALLING
+		; move bomb (half moves with terrain)
+		If G_TICKS %= 2
+			BOMB_LIST.x[V_EV0] -= 1
+		End
+		BOMB_LIST.y[V_EV0] += #BOMB_SPEED
+	
+		; some bombs move forward/back
+		If BOMB_LIST.rot_index[V_EV0] == 1
+			BOMB_LIST.x[V_EV0] -= 2
+		ElseIf BOMB_LIST.rot_index[V_EV0] == 2
+			BOMB_LIST.x[V_EV0] += 2
+		End
+		
+		; get sprite from array
+		Array1DGetElement BOMB_LIST.sprite V_EV0 V_LV2
+		Array1DGetElement BOMB_LIST.x V_EV0 V_LV0
+		Array1DGetElement BOMB_LIST.y V_EV0 V_LV1
+	
+		; update sprite position (double fold, adjust position)
+		%SPRITEMOVE V_LV2 V_LV0-8 V_LV1-16
+	
+		; off screen?
+		If V_LV1 > 160
+			BOMB_LIST.state[V_EV0] = #BOMB_STATE_IDLE
+			%SpriteHide V_LV2
+			Return
+		End
+	
+		; Collide vrs objects? (destroy multiple objects at once)
+		V_LV4 = false			; true on any collision
+		V_LV5 = 0			; index to start coll test at
+		While 1 == 1
+			call Object_IsCollide V_LV0 V_LV1 16 16 V_LV5
+			If V_RV0 == 0
+				BreakMore 2			; leave while loop
+			End
+			V_LV4 = true
+			V_LV5 = V_RV0			; check items from this index
+			call Object_Damage V_LV5-1 2
+		End
+
+		; any collision, remove the bomb
+		If V_LV4 == true
+			; play bomb sound
+			SoundPlay RID_SFX_BOMB
+		
+			BOMB_LIST.state[V_EV0] = #BOMB_STATE_IDLE
+			%SpriteHide V_LV2
+			Return
+		End
+	
+		; Collide?
+		CallRet Collide_SpriteVrsTiles V_LV0 V_LV1 16 16
+
+		; play bomb sound
+		SoundPlay RID_SFX_BOMB
+	
+		; Yes!
+		BOMB_LIST.state[V_EV0] = #BOMB_STATE_IDLE
+		%SpriteHide V_LV2
+	
+		; Bang!
+		call Explosion_Create V_LV0 V_LV1+10
+	
+		Return
+	End
+	
+	; blowing up
+Return
+

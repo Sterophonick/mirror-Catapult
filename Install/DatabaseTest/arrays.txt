@@ -1,0 +1,29 @@
+;;; Catapult array script file - automatically generated
+;;; any changes made by hand will be lost
+
+
+#ClassStats
+One dimensional
+20
+0
+$Attack
+$16 bit signed
+Ability to inflict physical damage
+$Defence
+$16 bit signed
+Ability to resist damage
+$HP
+$16 bit signed
+Health points
+$MP
+$16 bit signed
+Magic points
+*true
+RO
+#
+WorkRAM
+AnyAdd
+Array
+0
+0
+

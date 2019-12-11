@@ -1,0 +1,13 @@
+;;; Catapult script file - automatically generated
+;;; any changes made by hand will be lost
+
+
+#SID_FENCE_JUMP
+EN : "THE BIG DOG JUMPED THE FENCE"
+
+#SID_RENDERED
+EN : "Rendered Text Demo"
+
+#SID_TILED
+EN : "Tiled Text Demo"
+

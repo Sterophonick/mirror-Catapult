@@ -1,0 +1,280 @@
+; =======================================================
+; $Source: N:\\REPOS/Current/Data/Catapult/copter/Script/terrain_lvl00.txt,v $
+; $Date: 2003/03/14 03:39:26 $
+; $Revision: 1.1 $
+; =======================================================
+;
+;
+
+; Any transition related functions 
+;
+;
+;
+
+; === Definitions ==========================================================================================
+
+; screen transitions
+##TRANSITION_TYPE_NONE				0
+##TRANSITION_TYPE_FADE_BLACK		1		; fade from 0..31 darkness blend
+##TRANSITION_TYPE_FADE_WHITE		2		; fade from 0..31 white blend
+##TRANSITION_TYPE_UNFADE_BLACK	3		; fade from 31..0 darkness blend
+
+; text transitions
+##TRANSITION_TEXT_TYPE_NONE		0
+##TRANSITION_TEXT_TYPE_INTRO		1		; intro scroll mode
+
+##ROTATE_BANK_TRANSITION			25		; away from bomb rotations
+
+; text positions
+##TEXT_YPOS						50
+
+; === Externs to copy  ======================================================================================
+
+;ExternScript "Transitions"
+;ExternFunction "Transitions" Transition_Initialise
+;ExternFunction "Transitions" Transition_FadeToBlackStart
+;ExternFunction "Transitions" Transition_FadeFromBlackStart
+;ExternFunction "Transitions" Transition_IsActive
+;ExternFunction "Transitions" Transition_Continue
+
+; === Functions ===========================================================================================
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Initialise the transition subsystem
+; 
+
+Function Transition_Initialise 0
+
+	TransitionInfo.Type = #TRANSITION_TYPE_NONE
+	TransitionInfo.TextState = #TRANSITION_TEXT_TYPE_INTRO
+	TransitionInfo.State = 0
+
+	; load text tiles & palette
+	TileDataLoad [sprITE] RID_IMAGE_TRANS_TEXT	#TIX_TRANSITION_TEXT 0
+	PaletteLoad [spRITE] RID_PAL_INTRO #PIX_TRANSITION
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Start a fade to black transition. If the user passes in
+; false, all layers are forced to blend active
+; 
+; 
+
+Function Transition_FadeToBlackStart 1	; false - force all layers to blend, true - assume caller has done so
+
+	TransitionInfo.Type = #TRANSITION_TYPE_FADE_BLACK
+	TransitionInfo.State = 0
+	
+	; set display mode to fade to black - assume active on all windows
+	DisplaySetBlendMode 3
+	DisplaySetBlendTintLevel 0
+
+	; activate blending on all windows
+	DisplaySetWindowAttribute 0 [WindowBlends] true
+	DisplaySetWindowAttribute 1 [WindowBlends] true
+	DisplaySetWindowAttribute 2 [WindowBlends] true
+	DisplaySetWindowAttribute 3 [WindowBlends] true
+
+	If V_EV0 == false
+		DisplaySetBlendAttribute [BG0Source] true
+		DisplaySetBlendAttribute [BG1Source] true
+		DisplaySetBlendAttribute [BG2Source] true
+		DisplaySetBlendAttribute [BG3Source] true
+		DisplaySetBlendAttribute [BackdropSource] true
+		DisplaySetBlendAttribute [SpriteSource] true
+	End
+		
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Start a fade from black transition
+; 
+
+Function Transition_FadeFromBlackStart 0
+	
+	TransitionInfo.Type = #TRANSITION_TYPE_UNFADE_BLACK
+	TransitionInfo.State = 31
+	
+	; set display mode to fade to black - assume active on all windows
+	DisplaySetBlendMode 3
+	DisplaySetBlendTintLevel 31
+
+	; activate blending on all windows
+	DisplaySetWindowAttribute 0 [WindowBlends] true
+	DisplaySetWindowAttribute 1 [WindowBlends] true
+	DisplaySetWindowAttribute 2 [WindowBlends] true
+	DisplaySetWindowAttribute 3 [WindowBlends] true
+	
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Return true if a transition is in progress
+; 
+
+Function Transition_IsActive 0
+
+	If TransitionInfo.Type != #TRANSITION_TYPE_NONE
+		Return true
+	End
+	
+Return false
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Return true if a transition 'fade-in' is in progress (i.e.
+; from black or white back to normal)
+; 
+
+Function Transition_IsActiveFadeIn 0
+
+	If TransitionInfo.Type == #TRANSITION_TYPE_UNFADE_BLACK
+		Return true
+	End
+
+Return false
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Make the current transition (if any) proceed
+; 
+
+Function Transition_Continue 0
+
+	If TransitionInfo.Type == #TRANSITION_TYPE_NONE
+		Return
+
+	ElseIf TransitionInfo.Type == #TRANSITION_TYPE_FADE_BLACK
+		DisplaySetBlendTintLevel TransitionInfo.State
+		TransitionInfo.State += 1
+
+		; end?
+		If TransitionInfo.State == 32
+			TransitionInfo.Type = #TRANSITION_TYPE_NONE
+		End
+
+	ElseIf TransitionInfo.Type == #TRANSITION_TYPE_FADE_WHITE
+		DisplaySetBlendTintLevel TransitionInfo.State
+		TransitionInfo.State += 1
+
+		; end?
+		If TransitionInfo.State == 32
+			TransitionInfo.Type = #TRANSITION_TYPE_NONE
+		End
+
+	ElseIf TransitionInfo.Type == #TRANSITION_TYPE_UNFADE_BLACK
+		DisplaySetBlendTintLevel TransitionInfo.State
+		TransitionInfo.State -= 1
+
+		; end?
+		If TransitionInfo.State == 0
+			Call EndTransition
+		End
+	End
+	
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Start a text sliding on transition. Uses on reserved rotate 
+; bank, and one reserved sprite. 
+; 
+
+Function Transition_TextSlideStart 0 	;
+
+	; SIX_TRANSITION_TEXT sprite
+	; ROTATE_BANK_TRANSITION rotate bank
+	
+	; setup sprite
+	%SPRITESHOW_ROT #SIX_TRANSITION_TEXT	
+	SpriteSetAttribute #SIX_TRANSITION_TEXT [SizeBottom] 	#_SPRITE_SIZE64x32_BOTTOM
+	SpriteSetAttribute #SIX_TRANSITION_TEXT [SizeTop] 		#_SPRITE_SIZE64x32_TOP
+	SpriteSetAttribute #SIX_TRANSITION_TEXT [RotationIndex] 	#ROTATE_BANK_TRANSITION
+	SpriteSetAttribute #SIX_TRANSITION_TEXT [PaletteIndex] 	#PIX_TRANSITION
+	SpriteSetAttribute #SIX_TRANSITION_TEXT [TileIndex]		#TIX_TRANSITION_TEXT
+
+	; setup rotation
+	RotateAndScale #ROTATE_BANK_TRANSITION 0 256
+	
+	; setup position
+	TransitionInfo.Xpos = 250
+	TransitionInfo.TextType = #TRANSITION_TEXT_TYPE_INTRO	
+	TransitionInfo.TextState = 0
+	SpriteSetAttribute #SIX_TRANSITION_TEXT [Xpos] TransitionInfo.Xpos
+	SpriteSetAttribute #SIX_TRANSITION_TEXT [Ypos] #TEXT_YPOS
+	
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Process a text sliding on transition. Return false if
+; the text transition is no longer active
+; 
+
+Function Transition_TextSlideUpdate	0	;
+
+	; wrong mode?
+	If TransitionInfo.TextType == #TRANSITION_TEXT_TYPE_NONE
+		Return false
+	End
+
+	; --- scrolling in
+	If TransitionInfo.TextState == 0
+		; scroll text in
+		TransitionInfo.Xpos -= 3
+		SpriteSetAttribute #SIX_TRANSITION_TEXT [Xpos] TransitionInfo.Xpos
+		
+		If TransitionInfo.Xpos < 56
+			; change to stop state
+			TransitionInfo.TextState = 1
+			TransitionInfo.Xpos = 0
+		End
+		Return
+	End
+	
+	;  --- waiting
+	If TransitionInfo.TextState == 1
+		TransitionInfo.Xpos += 1
+		
+		If TransitionInfo.Xpos > 100
+			; change to stop state
+			TransitionInfo.TextState = 2
+			TransitionInfo.Xpos = 56
+		End
+		Return
+	End
+	
+	;  --- finished
+	If TransitionInfo.TextState == 2
+		; wait
+		TransitionInfo.Xpos -= 3
+		TransitionInfo.Xpos &= 511
+		SpriteSetAttribute #SIX_TRANSITION_TEXT [Xpos] TransitionInfo.Xpos
+		
+		If TransitionInfo.Xpos >=< 300 400
+			; change to stop state
+			TransitionInfo.TextState = 0
+			TransitionInfo.TextType = #TRANSITION_TEXT_TYPE_NONE
+		End
+		Return
+	End
+		
+Return
+
+; === Local functions =================================================================================
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; End a transition - restore to normal settings. Only
+; used for unblends.
+; 
+
+Function EndTransition 0
+
+	TransitionInfo.Type = #TRANSITION_TYPE_NONE
+
+	DisplaySetBlendMode 0
+	DisplaySetBlendTintLevel 0
+
+	; deactivate blending on all windows
+	DisplaySetWindowAttribute 0 [WindowBlends] false
+	DisplaySetWindowAttribute 1 [WindowBlends] false
+	DisplaySetWindowAttribute 2 [WindowBlends] false
+	DisplaySetWindowAttribute 3 [WindowBlends] false
+
+Return
+

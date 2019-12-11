@@ -1,0 +1,342 @@
+;;; Catapult array script file - automatically generated
+;;; any changes made by hand will be lost
+
+
+#BOMB_LIST
+One dimensional
+5
+0
+$x
+$16 bit signed
+
+$y
+$16 bit signed
+
+$rot_index
+$8 bit signed
+
+$sprite
+$8 bit signed
+
+$state
+$8 bit signed
+
+*false
+RO
+#
+WorkRAM
+AnyAdd
+Array
+0
+0
+
+#CopterInfo
+One dimensional
+1
+0
+$PowerCurrent
+$16 bit unsigned
+
+$PowerMax
+$16 bit unsigned
+
+$Timer
+$16 bit unsigned
+
+$PowerUps
+$8 bit unsigned
+
+*false
+RO
+#
+WorkRAM
+AnyAdd
+Array
+40
+0
+
+#EXPLODE_FRAMES
+One dimensional
+20
+0
+$id
+$16 bit signed
+
+*true
+RO
+#
+WorkRAM
+AnyAdd
+Array
+0
+0
+
+#EXPLODE_LIST
+One dimensional
+10
+0
+$x
+$16 bit signed
+
+$y
+$16 bit signed
+
+$padding
+$8 bit signed
+
+$sprite
+$8 bit signed
+
+$state
+$8 bit signed
+
+$timer
+$8 bit signed
+
+*false
+RO
+#
+WorkRAM
+AnyAdd
+Array
+48
+0
+
+#LEVEL00
+One dimensional
+1000
+0
+$ObjMove
+$16 bit signed
+
+$Checkpoint
+$8 bit signed
+
+$Flags
+$8 bit signed
+
+$Gfx
+$8 bit signed
+
+$Height
+$8 bit signed
+
+$Item
+$8 bit signed
+
+*true
+RO
+#
+WorkRAM
+AnyAdd
+Array
+0
+0
+
+#LEVEL_TILES
+Two dimensional
+20
+1
+$t1
+$16 bit signed
+
+$t2
+$16 bit signed
+
+$t3
+$16 bit signed
+
+$t4
+$16 bit signed
+
+$join_left
+$8 bit signed
+
+$join_right
+$8 bit signed
+
+*true
+RO
+#
+WorkRAM
+AnyAdd
+Array
+0
+0
+
+#MISSILE_LIST
+One dimensional
+5
+0
+$x
+$16 bit signed
+
+$y
+$16 bit signed
+
+$sprite
+$8 bit signed
+
+$state
+$8 bit signed
+
+*false
+RO
+#
+WorkRAM
+AnyAdd
+Array
+128
+0
+
+#OBJECT_INFO
+One dimensional
+10
+0
+$points
+$16 bit signed
+
+$TID
+$16 bit signed
+
+$ai
+$8 bit signed
+
+$hp
+$8 bit signed
+
+$pal
+$8 bit signed
+
+$powerups
+$8 bit unsigned
+
+$size
+$8 bit signed
+
+*true
+RO
+#
+WorkRAM
+AnyAdd
+Array
+0
+0
+
+#OBJECT_LIST
+One dimensional
+20
+0
+$points
+$16 bit signed
+
+$x
+$16 bit signed
+
+$y
+$16 bit signed
+
+$move_limit
+$16 bit signed
+
+$_ai
+$8 bit signed
+
+$ai
+$8 bit signed
+
+$flashing
+$8 bit signed
+
+$hp
+$8 bit signed
+
+$move_count
+$8 bit signed
+
+$oldpal
+$8 bit signed
+
+$powerups
+$8 bit unsigned
+
+$sprite
+$8 bit unsigned
+
+$sprite_2
+$8 bit unsigned
+
+$state
+$8 bit signed
+
+$timer
+$8 bit signed
+
+*false
+RO
+#
+WorkRAM
+AnyAdd
+Array
+160
+0
+
+#POWERUP_LIST
+One dimensional
+20
+0
+$points
+$16 bit signed
+
+$x
+$16 bit signed
+
+$y
+$16 bit signed
+
+$timer
+$16 bit unsigned
+
+$sprite
+$8 bit unsigned
+
+$state
+$8 bit signed
+
+*false
+RO
+#
+WorkRAM
+AnyAdd
+Array
+560
+0
+
+#TransitionInfo
+One dimensional
+1
+0
+$Xpos
+$16 bit unsigned
+
+$State
+$8 bit unsigned
+
+$TextState
+$8 bit unsigned
+
+$TextType
+$8 bit unsigned
+
+$Type
+$8 bit unsigned
+
+*false
+RO
+#
+WorkRAM
+AnyAdd
+Array
+760
+0
+

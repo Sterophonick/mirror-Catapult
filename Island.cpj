@@ -1,0 +1,28 @@
+;;; Catapult script file - automatically generated
+;;; any changes made by hand will be lost
+
+
+#FOLDER_SOURCE_ROOT
+.\Island
+
+#FOLDER_RESOURCE_ROOT
+.\Island\Resources
+
+#FOLDER_OUTPUT_ROOT
+N:\Builds\Island\Catapult
+
+#FILENAME_APP_FUNCTION_INTERFACE
+.\Island\Catapult_functions.h
+
+#FILENAME_APP_VARIABLE_INTERFACE
+.\Island\Catapult_variables.h
+
+#MAIN_SCRIPT
+island_test.txt
+
+#PROJECT_READONLY
+FALSE
+
+#NO_MAIN_SCRIPT
+FALSE
+

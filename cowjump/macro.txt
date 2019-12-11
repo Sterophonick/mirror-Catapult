@@ -1,0 +1,26 @@
+;;; Catapult macro script file - automatically generated
+;;; any changes made by hand will be lost
+
+
+#SPRITE_OFF
+?
+$SpriteSetAttribute %0 [sdFold] true
+$SpriteSetAttribute %0 [rotScale] false
+
+#SPRITE_SETPOS
+?
+$SpriteSetAttribute %0 [Xpos] %1
+$SpriteSetAttribute %0 [Ypos] %2
+$
+$
+$
+$
+$
+$
+
+#SPRITESIZE_32
+?
+$SpriteSetAttribute %0 [SizeTop] 0
+$SpriteSetAttribute %0 [SizeBottom] 2
+$
+

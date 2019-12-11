@@ -1,0 +1,47 @@
+;
+; -- DatabaseTest --
+;
+; Catapult v1.40b - Sample project
+;
+; This project demonstrates the ability to generate a script from an imported database file.
+;
+
+; =============================================================================================
+; --- contents of the exported database file (sample.csv)
+
+; Name;HP;MP;Attack;Defense
+; Fighter;30;5;25;20
+; Ranger;25;15;18;15
+; Wizard;15;30;10;10
+;
+; Note - 'Name' is for reference only. This field is ignored when a script is generated.
+;
+; See 'database_sample' for the generated script.
+
+; =============================================================================================
+
+; --- reference generated script
+ExternScript "database_sample"
+
+; --- main script begins
+
+	; (only display once at start of execution)
+	If G_TICKS == 0
+	
+		; display all the stats from the array to the output log (press NUMPAD - to toggle)
+		Log "All known class stats:"
+		
+		V_LV0 = 0
+		While V_LV0 < 20
+		
+			; stop at first set of stats not filled in 
+			If ClassStats.HP[V_LV0] == -1
+				BreakMore 2
+			End
+			
+			Log "HP:%d MP:%d Attack:%d Defence:%d" ClassStats.HP[V_LV0] ClassStats.MP[V_LV0] ClassStats.Attack[V_LV0] ClassStats.Defence[V_LV0]
+			V_LV0 += 1
+		End
+	End
+	
+Return

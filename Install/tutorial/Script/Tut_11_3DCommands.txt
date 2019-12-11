@@ -1,0 +1,234 @@
+;
+; Tutorial #11 - 3D Graphics in Catapult - (Vers 2, 15/03/04)
+;	Written by J.Hudson, edited by M.Shamgar
+;
+; This tutorial teaches you about : 
+;
+; i. Basic draw primitives in Catapult
+; ii. Using the Catapult 3D commands and data structures
+; 
+
+
+;--------------------------------------------------------------------------------------------------------------
+; This is an advanced tutorial that is not considered essential knowledge for developing 
+; games on the GBA.
+;
+; This tutorial will assume that you already have some knowledge of 3D math. If not, it
+; is recommended that you first acquaint yourself with 3D matrices, vectors and 
+; perspective transforms - the internet is full of information on these subjects.
+;
+; NOTE : The freeware version of Catapult only comes with a very basic frame buffer demo.
+; The purchased 'Catapult Export' version comes with a extensive 3D demo, including  
+; mesh rendering, camera manipulation, and screen transform functions.
+;
+
+
+
+;--------------------------------------------------------------------------------------------------------------
+; Basic draw primitives in Catapult
+;
+; Virtually of the demos, tutorials and projects dealt with so far revolve around the 2D 
+; capabilities of the GBA (i.e. tiles, backgrounds & sprites). Of the 6 video modes the 
+; GBA supports, the first 3 modes are 2D modes. The remaining 3 modes are 'frame buffer' 
+; modes (i.e. support raw pixel by pixel drawing to the screen).
+;
+; This tutorial deals with frame buffer modes.
+; 
+
+
+
+;--------------------------------------------------------------------------------------------------------------
+; First of all, let us use graphics primitives to draw a simple picture. Before we can begin, we
+; need to set up the GBA screen mode to allow us to draw to the screen. We will be using
+; mode 4 (240x160, with 256 colors) - for details on other screen modes, see the Catapult
+; user guide. 
+;
+; 1. Uncomment the lines below that are marked with *** (1).
+;
+; These lines set up the correct video mode, reset the display, and create 2 palette
+; colors for our graphics. If you run now you won't see anything - we haven't started drawing yet!
+;
+; Now look at the code block marked with *** (2). This is where we will draw some shapes. If
+; you look at the DrawPrimitives function  that is called from here, you can see some commands
+; to draw shapes, it should be fairly obvious how this works. The important thing about this code
+; is the [PageFlip] attributes. These commands are needed to display the picture because we are
+; using a technique called "double buffering".
+;
+; Double buffering involves keeping two separate screens of video RAM, only one of which is visible
+; at any time. Drawing is only done on the invisible screen, which is then flipped into view once all
+; drawing is complete. This prevents unsightly flickering, as most 3D drawing cannot be performed
+; within the space of a vBlank period.
+;
+; What we are doing here is making buffer zero visible with "DisplaySetAttribute [PageFlip] 0".
+; Now drawing will automatically occur in the second buffer. If you use the debugger to step through
+; the initialisation, you will see that nothing appears on screen until the second
+; "DisplaySetAttribute [PageFlip] 1" is called. This command flips the buffers around, so we can now
+; see what was in the previously hidden buffer, which is our picture.
+;
+;
+; 2. Uncomment the lines below that are marked with *** (2).
+;
+; 3. Run the project.
+;
+; This is only a static picture that gets drawn once at initialisation. If we were animating the display
+; with moving objects, we would use a line such as "DisplaySetAttribute [PageFlip] G_TICKS&1" to
+; flip the buffers at every tick, after we had drawn each frame of our scene.
+;
+; You should now be able to do some simple 2D graphics using what you have learnt.
+
+
+
+;--------------------------------------------------------------------------------------------------------------
+; Using the Catapult 3D commands and data structures
+;
+; Now for the 3D functions. We don't care about drawing the simple primitives from the first section,
+; so you can recomment out the code block marked with *** (2). To keep this tutorial simple, we
+; won't even be doing proper 3D - we will just display a spinning triangle from above.
+;
+; 1. Re-comment the lines below that are marked with *** (2).
+;
+;
+; NOTE: Catapult 3D uses 20.12 fixed point. This means that 4096 represents a distance of 1 unit,
+; 2048 represents 0.5, etc. Check the internet if you are unfamiliar with fixed point arithmetic.
+;
+; First of all, we need to create some geometry to describe a 3D object in our world. We will
+; start with something simple: a triangle. A triangle is described by 3 vertices (corners),
+; so you will need an array of 3 vectors to hold information about this triangle. 
+;
+; Open the array dialog, and you will see that there is already an array called "Shape3D",
+; with an element of type "vec" called "vertex". This is where we will store the 3 corners of the triangle.
+; You cannot access the values of a vector directly, you must use VectorGet and VectorSet.
+;
+; 2.  Uncomment the lines below that are marked with *** (3).
+; 	Uncomment the lines below that are marked with *** (4).
+;
+; Look at the function Create3DObject, and you will see that this is exactly how we 
+; will define our object. You can use Catapult  tables to store 3D data very nicely, but in
+; the interests of simplicity, we will just use VectorSet. 
+;
+; 3. Run the project, then open the array viewer.
+;	- Browse the Shape3D array and you will see all the x,y and z values that we have entered using the ArraySet function.
+;
+; Now, let's draw something! Press CTRL+A to bring up the array editor. Look at the Calculation3D array.
+; It contains a matrix and a vector - these are just temporary data structures which we will use to help draw
+; our 3D scene. Close the array editor and look at the function Draw3DScene. This is where the rotation
+; and drawing of our triangle takes place. Try and follow the matrix operations that rotate the shape,
+; move it to the center of the screen, and then apply the combined operations to the triangle's corners.
+;
+; If you are new to 3D this may all seem a bit daunting, but the best way to learn is by experimentation. If
+; you are stuck, there are plenty of general 3D tutorials on the internet. You may also want to look at the
+; 3D demo that comes with the full version of Catapult.
+;
+; Other things you might like to try:
+;	- change the initial values of the shape to produce different shaped triangles.
+;	- use the MatrixScale function to zoom the triangle in and out.
+;	- extend the code to rotate in three dimensions.
+;	- render two triangles that rotate at different speeds to create a GBA clock!
+
+
+
+; ==================================
+; CATAPULT SCRIPT BEGINS
+
+; --- main loop
+
+; *** (4) Uncomment here to enable 3D drawing
+;Call Draw3DScene
+
+Return
+
+Function Initialise 0
+
+; *** (1) Uncomment here to initialise GBA display
+
+;	DisplaySetAttribute [BlankDisplay] false
+;	DisplaySetAttribute [VideoMode] 4	; set mode to 8bpp 240x160
+;	DisplaySetAttribute [EnableBG0] true	
+;	DisplaySetAttribute [EnableBG2] true	
+;	TileMapSetOffsetX 0 0
+;	TileMapSetOffsetY 0 0	
+;	TileMapSetOffsetX 2 0
+;	TileMapSetOffsetY 2 0		
+;	PaletteSetColour [bg] 1 {31,0,0}
+;	PaletteSetColour [bg] 2 {0,31,0}	
+
+; *** (2) Uncomment here to draw some shapes	
+;	DisplaySetAttribute [PageFlip] 0
+;	Call DrawPrimitives
+;	DisplaySetAttribute [PageFlip] 1	
+
+; *** (3) Uncomment here to set up 3D shape
+;	Call Create3DObject
+
+
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Draw some simple shapes using draw primitive commands
+; 
+
+Function DrawPrimitives 0
+	Call ClearScreen
+
+	DrawTriangle 120 40 100 80 140 80 1 ; draw a triangle with color 1
+	DrawLine 120 80 160 100 2 ; draw a line with color 2
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;  Blank out the current screen
+; 
+
+Function ClearScreen 0
+	; --- just draw 2 triangles that totally cover the screen
+	DrawTriangle 0 0 240 0 240 160 0
+	DrawTriangle 0 0 240 160 0 160 0
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Draw a 3D scene, called once per tick
+; 
+
+Function Draw3DScene 0
+	Call ClearScreen ; first clear the screen of previous drawing
+	
+	; --- get the rotation angle from time elapsed:
+	V_LV0 = G_TICKS
+	V_LV0 &= 255	
+	
+	; --- set up a matrix to rotate the points in the object
+	VectorSet Calculation3D.temp 0 0 0 4096	; create a unit vector pointing out of the screen
+	MatrixIdentity Calculation3D.m 0 ; set Calculation3D.m[0] to identity
+	MatrixRotate Calculation3D.m 0 V_LV0 Calculation3D.temp 0	; rotate the matrix about vector Calculation3D.temp[0]
+	
+	; --- move the matrix from the origin to the center of the screen
+	VectorSet Calculation3D.temp 0 120 80 0
+	MatrixTranslate Calculation3D.m 0 Calculation3D.temp 0
+	
+	; --- now apply	the matrix to each of the vertices in the shape, storing the rotated vertices
+	V_LV0 = 0
+	While V_LV0 < 3
+		MatrixApplyToVector Shape3D.vertex_rotated V_LV0 Shape3D.vertex V_LV0 Calculation3D.m 0 ; apply matrix m to shape vertices
+		V_LV0 += 1
+	End
+	
+	; --- get the rotated values out of the data structure into local variables
+	VectorGet Shape3D.vertex_rotated 0 V_LV0 V_LV1 V_EV0
+	VectorGet Shape3D.vertex_rotated 1 V_LV2 V_LV3 V_EV1
+	VectorGet Shape3D.vertex_rotated 2 V_LV4 V_LV5 V_EV2
+	
+	; --- draw a triangle using the rotated vertices - we only use the x and y components
+	DrawTriangle V_LV0 V_LV1 V_LV2 V_LV3 V_LV4 V_LV5 1
+	
+	; --- flip the page we have just drawn to make it visible
+	DisplaySetAttribute [PageFlip] G_TICKS&1
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Create a very simple polygon object to place in a 3D world
+; 
+
+Function Create3DObject 0
+	VectorSet Shape3D.vertex 0 -50 -50 0	; set Shape3D.vertex[0] to {-50,-50,0}
+	VectorSet Shape3D.vertex 1 50 -50 0	; set Shape3D.vertex[1] to {50,-50,0}
+	VectorSet Shape3D.vertex 2 0 50 0	; set Shape3D.vertex[2] to {0,50,0}		
+Return

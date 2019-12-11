@@ -1,0 +1,28 @@
+;;; Catapult script file - automatically generated
+;;; any changes made by hand will be lost
+
+
+#FOLDER_SOURCE_ROOT
+.\demo_draw
+
+#FOLDER_RESOURCE_ROOT
+.\demo_draw\Resources
+
+#FOLDER_OUTPUT_ROOT
+.\Builds\demo_draw
+
+#FILENAME_APP_FUNCTION_INTERFACE
+N:\Current\Code\TestApp\Catapult_functions.h
+
+#FILENAME_APP_VARIABLE_INTERFACE
+N:\Current\Code\TestApp\Catapult_variables.h
+
+#MAIN_SCRIPT
+main.txt
+
+#PROJECT_READONLY
+FALSE
+
+#NO_MAIN_SCRIPT
+FALSE
+

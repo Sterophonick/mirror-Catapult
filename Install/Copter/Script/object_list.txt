@@ -1,0 +1,72 @@
+; =======================================================
+; $Source: N:\\REPOS/Current/Data/Catapult/copter/Script/terrain_lvl00.txt,v $
+; $Date: 2003/03/14 03:39:26 $
+; $Revision: 1.1 $
+; =======================================================
+;
+;
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`
+; Objects definitions
+;
+
+##LOBJ_NONE				0
+##LOBJ_MISSILE_BIG			1
+##LOBJ_OILTANK				2
+##LOBJ_MISSILE_HARD		3
+##LOBJ_SILO					4
+##LOBJ_HOUSE_1				5
+##LOBJ_HOUSE_2				6
+##LOBJ_TANKMOVE			7				; Tank on wheels
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`
+; Object size types
+;
+
+##OBJSIZE_16x16				0
+##OBJSIZE_16x32				1
+##OBJSIZE_32x32				2
+
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`
+; Object AI behavior types
+;
+
+##OBJAI_IDLE					0				; do nothing
+##OBJAI_LAUNCH				1				; at a random time, start flying up
+##OBJAI_LAUNCH_SLOW		2				; same as launch - but slow moving
+##OBJAI_ROLL				3				; rolls along the map forward/backward
+
+
+; === Item definitions =============================================================================
+
+; ('cos there is so much, break the data into two sets of table defines - makes no difference, except 
+; easier to edit)
+
+; resource info..
+TableDefine OBJECT_INFO 0 		size		pal		TID 
+
+;			Object size ID	 	Palette			Tile index
+TableData	0				0				0						; None
+TableData	#OBJSIZE_16x32	#PIX_OBJECT_1	#TIX_OBJ_MISSILE_BIG		; Big Missile
+TableData	#OBJSIZE_16x16	#PIX_OBJECT_2	#TIX_OBJ_OILTANK		; Oil tank
+TableData	#OBJSIZE_16x32	#PIX_OBJECT_3	#TIX_OBJ_MISSILE_HARD	; Hard Missile
+TableData	#OBJSIZE_16x16	#PIX_OBJECT_4	#TIX_OBJ_SILO			; Silo
+TableData	#OBJSIZE_32x32	#PIX_OBJECT_1	#TIX_OBJ_HOUSE_1		; House 1
+TableData	#OBJSIZE_32x32	#PIX_OBJECT_5	#TIX_OBJ_HOUSE_2		; House 2
+TableData	#OBJSIZE_32x32	#PIX_OBJECT_6	#TIX_OBJ_TANKMOVE		; Tank on wheels
+
+
+; properties...
+TableDefine OBJECT_INFO 0 		hp			AI		points		powerups
+
+;			Hitpoints		AI						Points		Powerup count
+TableData	0			0						0			0			; None
+TableData	3			#OBJAI_LAUNCH			150			2			; Big Missile
+TableData	1			#OBJAI_IDLE				30			0			; Oil tank
+TableData	6			#OBJAI_LAUNCH_SLOW 	250			2			; Hard Missile
+TableData	2			#OBJAI_IDLE				50			1			; Silo
+TableData	15			#OBJAI_IDLE				750			4			; House 1
+TableData	25			#OBJAI_IDLE				2500		8			; House 2
+TableData	11			#OBJAI_ROLL				1000		3			; Moving tank
+

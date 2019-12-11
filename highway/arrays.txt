@@ -1,0 +1,298 @@
+;;; Catapult array script file - automatically generated
+;;; any changes made by hand will be lost
+
+
+#animdata
+One dimensional
+30
+0
+$endframe
+16 bit unsigned
+$loop
+16 bit unsigned
+$startframe
+16 bit unsigned
+$speed
+8 bit unsigned
+*true
+RO
+#
+WorkRAM
+AnyAdd
+Array
+0
+0
+
+#camera
+One dimensional
+1
+0
+$oldx
+32 bit signed
+$oldy
+32 bit signed
+$posx
+32 bit signed
+$posy
+32 bit signed
+$vx
+16 bit signed
+$vy
+16 bit signed
+*false
+RO
+#
+WorkRAM
+AnyAdd
+Array
+0
+0
+
+#class
+One dimensional
+128
+0
+$anim
+16 bit signed
+$flags
+16 bit unsigned
+$frame
+16 bit signed
+$initfunc
+16 bit unsigned
+$method
+16 bit unsigned
+$hith
+8 bit unsigned
+$hitw
+8 bit unsigned
+$hitx
+8 bit unsigned
+$hity
+8 bit unsigned
+$sprpal
+8 bit unsigned
+$type
+8 bit unsigned
+*true
+RO
+#
+WorkRAM
+AnyAdd
+Array
+0
+0
+
+#deathpiece
+One dimensional
+8
+0
+$frame
+16 bit signed
+$ofsx
+16 bit signed
+$ofsy
+16 bit signed
+$vx
+16 bit signed
+$vy
+16 bit signed
+$windresistance
+16 bit signed
+$pal
+8 bit unsigned
+*true
+RO
+#
+WorkRAM
+AnyAdd
+Array
+0
+0
+
+#framedata
+One dimensional
+256
+0
+$resource
+16 bit signed
+$tileindex
+16 bit unsigned
+$rangeindex
+8 bit signed
+$sprsize
+8 bit unsigned
+*true
+RO
+#
+WorkRAM
+AnyAdd
+Array
+0
+0
+
+#HBlankData
+One dimensional
+30
+0
+$line
+8 bit unsigned
+$scrollspeedx
+8 bit unsigned
+$tilemapbank
+8 bit unsigned
+*false
+RO
+#
+WorkRAM
+AnyAdd
+Array
+20
+0
+
+#horse_rocking_data
+One dimensional
+7
+0
+$frame
+16 bit unsigned
+*true
+RO
+#
+WorkRAM
+AnyAdd
+Array
+0
+0
+
+#object
+One dimensional
+128
+0
+$posx
+32 bit signed
+$posy
+32 bit signed
+$anim
+16 bit unsigned
+$counter
+16 bit unsigned
+$flags
+16 bit unsigned
+$frame
+16 bit unsigned
+$method
+16 bit unsigned
+$type
+16 bit signed
+$vx
+16 bit signed
+$vy
+16 bit signed
+$collisions
+8 bit unsigned
+$hith
+8 bit unsigned
+$hitw
+8 bit unsigned
+$hitx
+8 bit unsigned
+$hity
+8 bit unsigned
+$pause
+8 bit unsigned
+*false
+RO
+#
+FastRAM
+AnyAdd
+Array
+0
+0
+
+#region
+One dimensional
+1
+0
+$height
+16 bit signed
+$width
+16 bit signed
+$x1
+16 bit signed
+$x2
+16 bit signed
+$y1
+16 bit signed
+$y2
+16 bit signed
+*false
+RO
+#
+WorkRAM
+AnyAdd
+Array
+112
+0
+
+#sectiondata
+One dimensional
+30
+0
+$x
+32 bit signed
+$encounter
+16 bit signed
+$foreground
+16 bit signed
+$ghosttype
+16 bit signed
+$ghostrate
+8 bit unsigned
+$hardmode
+8 bit signed
+*true
+RO
+#
+WorkRAM
+AnyAdd
+Array
+0
+0
+
+#spr_lengthdata
+One dimensional
+12
+0
+$length
+8 bit unsigned
+*true
+RO
+#
+WorkRAM
+AnyAdd
+Array
+0
+0
+
+#stagedata
+One dimensional
+1
+0
+$bg1
+16 bit unsigned
+$bg2
+16 bit unsigned
+$fg1
+16 bit unsigned
+$fg2
+16 bit unsigned
+*true
+RO
+#
+WorkRAM
+AnyAdd
+Array
+0
+0
+

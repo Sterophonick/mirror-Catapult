@@ -1,0 +1,21 @@
+;;; Catapult array script file - automatically generated
+;;; any changes made by hand will be lost
+
+
+#segments
+One dimensional
+256
+0
+$x
+16 bit signed
+$y
+16 bit signed
+*false
+RO
+#
+WorkRAM
+AnyAdd
+Array
+0
+0
+

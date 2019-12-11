@@ -1,0 +1,34 @@
+;;; Catapult macro script file - automatically generated
+;;; any changes made by hand will be lost
+
+
+#DISPLAY_INIT
+?Setup the display properties
+$DisplaySetAttribute [BlankDisplay] false
+$DisplaySetAttribute [EnableSprite] true
+$DisplaySetAttribute [SpriteLayout] 1         ; conseq tile mode
+$
+$
+$
+
+#SPRITE_ON
+?Turn this sprite on, non rotational mode
+$SpriteSetAttribute %0 [RotScale] 0
+$SpriteSetAttribute %0 [SdFold] 0
+$
+
+#SPRITE_SETPOS
+?Set the position of this sprite
+$SpriteSetAttribute %0 [Xpos] %1
+$SpriteSetAttribute %0 [Ypos] %2
+$
+$
+$
+
+#SPRITESIZE_32
+?Set a sprites size to 32x32 pixels
+$SpriteSetAttribute %0 [SizeTop] 0
+$SpriteSetAttribute %0 [SizeBottom] 2
+$
+$
+

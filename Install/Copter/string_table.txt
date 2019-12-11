@@ -1,0 +1,85 @@
+;;; Catapult script file - automatically generated
+;;; any changes made by hand will be lost
+
+
+#SID_ENDLEV_BONUS_1
+EN : "Power Bonus = "
+
+#SID_ENDLEV_BONUS_2
+EN : "Level Bonus = "
+
+#SID_ENDLEV_LEVEL_1
+EN : "Level"
+
+#SID_ENDLEV_LEVEL_2
+EN : "Complete!"
+
+#SID_ENDLEV_PLAYAGAIN
+EN : "Press Start to play again"
+
+#SID_ENDLEV_POWER
+EN : "Power left = "
+
+#SID_ENDLEV_SCORE
+EN : "Score = "
+
+#SID_ENDLEV_SCORE1
+EN : "Current score = "
+
+#SID_ENDLEV_SCORE2
+EN : "Best score = "
+
+#SID_ENDLEV_TEMPT
+EN : "Want more levels?"
+
+#SID_ENDLEV_TEMPT1
+EN : "Purchase an EXPORT package!"
+
+#SID_GAMEOVER
+EN : "Game Over"
+
+#SID_INSTRUCT_1
+EN : "Use the Dpad to move around"
+
+#SID_INSTRUCT_2
+EN : "Press A to shoot"
+
+#SID_INSTRUCT_3
+EN : "Release B to bomb"
+
+#SID_INSTRUCT_4
+EN : "Collect power cells"
+
+#SID_INSTRUCT_5
+EN : "Hold A for rapid fire"
+
+#SID_INSTRUCT_6
+EN : "Hold B for triple bomb"
+
+#SID_INSTRUCT_7
+EN : "Use the beam to collect power"
+
+#SID_INSTRUCT_8
+EN : "Unused power earns points"
+
+#SID_LIVES
+EN : "Lives"
+
+#SID_PLAYAGAIN
+EN : "Press Start to play again"
+
+#SID_SCORE
+EN : "Score"
+
+#SID_START_GAME
+EN : "Press Space to begin"
+
+#SID_TRIP_GOAL
+EN : "GOAL"
+
+#SID_TRIP_START
+EN : "START"
+
+#SID_WELCOMECOPTER
+EN : "Welcome to Copter"
+

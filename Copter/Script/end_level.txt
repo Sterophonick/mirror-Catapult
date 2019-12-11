@@ -1,0 +1,150 @@
+; =======================================================
+; $Source: N:\\REPOS/Current/Data/Catapult/copter/Script/end_level.txt,v $
+; $Date: 2003/10/27 08:46:14 $
+; $Revision: 1.2 $
+; =======================================================
+;
+; 
+; Handle end of level processing
+;
+
+; =============================================================================================
+; ---- definitions
+
+##ENDLEV_TEXTX			4				; left align text at this position
+##ENDLEV_NUMBERX		26				; right align position for numbers displayed
+
+##BONUS_POINTS			20				; per power pt remaining
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Display level name on the screen
+; 
+
+Function EndLevel_Display 0
+
+	V_LV0 = #ENDLEV_TEXTX+2
+	
+	; level
+	StringDisplay V_LV0 3 SID_ENDLEV_LEVEL_1
+	V_LV1 StringGetLength SID_ENDLEV_LEVEL_1
+	V_LV0 += V_LV1+1
+	
+	; number, i.e. 1-1
+	V_LV1 = 0
+	V_LV1 /= 4
+	StringDisplayValue V_LV0 3 0 V_LV1+1
+	StringDisplayCharacter V_LV0+1 3 '-'
+
+	V_LV1 = 0
+	StringDisplayValue V_LV0+2 3 0 V_LV1+1
+	V_LV0 += 4
+
+	; complete
+	StringDisplay V_LV0 3 SID_ENDLEV_LEVEL_2
+
+	; clear space for smaller numbers
+	TileMapFillRect #LID_HUD [All] #ENDLEV_NUMBERX-4 8 4 6 0
+
+	; score
+	StringDisplay  #ENDLEV_TEXTX 8 SID_ENDLEV_SCORE
+	StringDisplayValue #ENDLEV_NUMBERX 8 0 G_SCORE
+	
+	; power
+	StringDisplay  #ENDLEV_TEXTX 10 SID_ENDLEV_POWER
+	StringDisplayValue #ENDLEV_NUMBERX 10 0 CopterInfo.PowerCurrent
+	
+	; bonus(es)
+	StringDisplay  #ENDLEV_TEXTX 12 SID_ENDLEV_BONUS_1
+	V_LV1 = CopterInfo.PowerCurrent
+	V_LV1 *= 20
+	StringDisplayValue #ENDLEV_NUMBERX 12 0 V_LV1
+
+	StringDisplay  #ENDLEV_TEXTX 13 SID_ENDLEV_BONUS_2
+	StringDisplayValue #ENDLEV_NUMBERX 13 0 G_LEVEL_BONUS
+	
+
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Tick the power down, and the bonus up. Return true
+; when all bonuses have been added 
+; 
+
+Function EndLevel_AddBonus 0
+
+	; general delay timer
+	If G_OUTRO_TIMER > 0
+		G_OUTRO_TIMER -= 1
+		Return
+	End
+	
+	; add power bonus
+	If CopterInfo.PowerCurrent > 0
+		G_SCORE += #BONUS_POINTS
+		CopterInfo.PowerCurrent -= 1
+		
+		If G_TICKS&3 == 0
+			SoundPlay RID_SFX_TICK
+		End
+		
+		; add delay (every 4 ticks)
+		If CopterInfo.PowerCurrent == 0
+			G_OUTRO_TIMER = 20
+		End
+			
+		Return false
+	End
+	
+	; add level bonus
+	If G_LEVEL_BONUS > 0
+		V_LV0 Min 20 G_LEVEL_BONUS
+		G_LEVEL_BONUS -= V_LV0
+		G_SCORE += V_LV0
+
+		; add delay
+		If G_LEVEL_BONUS == 0
+			G_OUTRO_TIMER = 120
+		End
+
+		If G_TICKS&3 == 0
+			SoundPlay RID_SFX_TICK
+		End
+		Return false
+	End
+	
+	; finished!
+Return true
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Finish the 'end of level' off. Demo version prints
+; temptation text, export version will continue on to
+; next level
+; 
+
+Function EndLevel_Finish 0
+
+	; clear screen
+	TileMapFillRect #LID_HUD [All] 0 0 32 32 0
+	DisplaySetAttribute [EnableSprite] false
+	
+	; display text
+	StringDisplay 5 3 SID_ENDLEV_TEMPT
+	StringDisplay 1 5 SID_ENDLEV_TEMPT1
+
+	; display scores
+	StringDisplay 1 7 SID_ENDLEV_SCORE1
+	StringDisplay 1 8 SID_ENDLEV_SCORE2
+	
+	If G_SCORE > G_BESTSCORE
+		; new top score!
+		G_BESTSCORE = G_SCORE
+	End
+	
+	StringDisplayValue 25 7 0 G_SCORE
+	StringDisplayValue 25 8 0 G_BESTSCORE
+		
+	; play again
+	StringDisplay 2 13 SID_ENDLEV_PLAYAGAIN
+ 	
+Return
+

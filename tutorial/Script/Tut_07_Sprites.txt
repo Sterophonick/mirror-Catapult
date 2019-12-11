@@ -1,0 +1,387 @@
+;
+; Tutorial #7 - Sprites (Vers 2 - 12/02/04)
+;	Written by M.Shamgar
+;
+; This tutorial teaches you about : 
+;
+; i. What are sprites?
+; ii. Sprite commands
+; iii. A simple sprite program 
+; 
+
+; ------------------------------------------------------------------------------
+; What are sprites? 
+;
+; A sprite is a (small) image that can be positioned anywhere on the screen. It can be moved without 
+; having to 'restore' the image below it. Unlike background (or Tilemap) images a sprite can be positioned 
+; at an arbitrary pixel position.
+;
+; The GBA has support for up to 128 independent sprites through hardware. 
+;
+; Sprites have the following properties :
+;  - can have transparent regions (colour index 0 is transparent)
+;  - can come in various sizes (from 8x8 up to 64x64 pixels)
+;  - can be individually made either 16 or 256 colour
+;  - can be flipped horizontally and vertically
+;  - multiple sprites can share the same tiles
+;  - can be assigned one of 16 palettes (in 16 colour mode)
+;  - can be given several render order priorities (i.e. which sprites appear on top of others)
+;  - can be scaled and rotated
+;  - have their own dedicated tile memory (32k).
+;  - have their own dedicated palette (256 colours) 
+;  - various other effects can be applied (i.e. mosaic, transparency, etc)
+;
+;
+; The image that a sprite displays is constructed out of tiles, just like a TileMap (i.e. composed from 8x8 pixel images).
+; Unlike a Tilemap, the tiles that a sprite uses must be consecutive (i.e. there is no way to setup a 'mini' tilemap for a sprite).
+;
+; There is a secondary tile mode for sprites, which results in each horizontal series of tiles using 
+; the tile index from the previous line plus 32...but this will not be dealt with here (generally makes little difference).
+;
+; Additionally, there is no way to flip an individual tile in the sprite. The entire sprite must be flipped.
+; The same rule applies to palettes, there is no way to specify a palette for only a single tile within the sprite. 
+; A palette applies to the entire sprite.
+;
+; Applying a rotation or scale to a sprite is a little strange. There are only 32 possible different rotation/scale combinations
+; at any time (i.e. less than 128, the number of sprites). 
+;
+; Rotation / scaling information has to be setup separately from a sprite (we will look at this later).
+;
+
+
+
+; ------------------------------------------------------------------------------
+; Sprite commands
+;
+; All the (standard) properties of a sprite are set through a single command:
+;
+; 	SpriteSetAttribute <sprite index> [attribute] <value>
+;
+; Similarly the properties can be read from a sprite through:
+;
+; 	SpriteGetAttribute <sprite index> [attribute] <value>
+;
+; The sprite index dictates which sprite is manipulated, this must be a number between 0..127.
+;
+;
+; A couple of facts about sprites that tend to trap people:
+;
+; 	i. Before ANY sprites appear, they must be enabled through the DisplaySetAttribute command.
+;
+; 	ii. The visibility of a sprite is controlled by the SdFlag & RotScale flags (see below). To hide a sprite
+;      		the SdFlag must be set to TRUE, and the RotScale flag to FALSE.
+;
+; The [attribute] field controls which of the sprites attributes is read/written. The range 
+; of possible 'values' depends on the attribute.
+;
+;
+;
+;
+;
+; The following attributes can be used :
+;
+; [Xpos] - set the x position of the sprite. 
+; 		Value : 0..511
+;		Example : SpriteSetAttribute 0 [Xpos] 10
+;
+; [Ypos] - set the y position of the sprite
+;		Value : 0..255
+;		Example : SpriteSetAttribute 0 [Ypos] 10
+;
+; [ColourMode] - determines whether the sprite is 16 or 256 colour. 
+;		Value : #_COL_16 (or 0) = 16 colour
+;			    #_COL_256 (or 1) = 256 colour
+;		Example : SpriteSetAttribute 0 [ColourMode] #_COL_16
+;
+; [FlipHorizontal] - when set flips the sprite horizontally. 
+;		Value : 0 = not flipped, 1 = flipped
+;		Example : SpriteSetAttribute 0 [FlipHorizontal] false
+;
+; [FlipVertical] - when set flips the sprite vertically. 
+;		Value : 0 = not flipped, 1 = flipped
+;		Example : SpriteSetAttribute 0 [FlipVertical] true
+;
+; [PaletteIndex] - determines which of the 16 palette banks the sprite uses. Only for 16 colour sprites. 
+;		Value : 0..15 (0 - start at colour 0, 1 - start at colour 16, etc..)
+;		Example : SpriteSetAttribute 0 [PaletteIndex] 6
+;
+; [RenderLayer] - determines when the sprite is displayed (i.e. and what it is displayed on top of). 
+;		Value : 0..3 (0 = highest, 3 = lowest)
+;		A sprite is displayed on top of a tilemap with the same priority. Individually, sprites
+; 		 with a lower sprite index is displayed on top of a sprite with a higher index.
+;
+;		Example : SpriteSetAttribute 0 [RenderLayer] 1
+;
+; [SizeTop] / [SizeBottom] - these two attributes in tandem control the sprite size. It is useful to create a
+;		macro that issues both of these commands at once.
+;
+;		The following sprite sizes are available (based on the GBA hardware) :
+;			8x8     : top = 0, bottom = 0
+;			16x16 : top = 0, bottom = 1
+;			32x32 : top = 0, bottom = 2
+;			64x64 : top = 0, bottom = 3
+;
+;			16x8   : top = 1, bottom = 0
+;			32x8   : top = 1, bottom = 1
+;			32x16 : top = 1, bottom = 2
+;			64x32 : top = 1, bottom = 3
+;
+;			8x16   : top = 2, bottom = 0
+;			8x32   : top = 2, bottom = 1
+;			16x32 : top = 2, bottom = 2
+;			32x64 : top = 2, bottom = 3
+;
+;		These are the only valid combinations for top/bottom.
+;
+;		All of these values are available, through the built-in system definitions within Catapult:
+;				- #_SPRITE_SIZE8x8_TOP
+;				- #_SPRITE_SIZE8x8_BOTTOM
+;				- ..etc..
+;
+;		Example : SpriteSetAttribute 0 [SizeTop] #_SPRITE_SIZE32x16_TOP
+;				 SpriteSetAttribute 0 [SizeBottom] #_SPRITE_SIZE32x16_BOTTOM		; set 32x16 sprite size
+;
+;
+; [Mosaic] - activates mosaic mode for this sprite.
+;		Mosaic makes the sprite look chunky. The sprite looks as if it has less pixels, and they are larger in size.
+;		Value : 0  = mosaic off, 1 = mosaic effects on
+;		Example : SpriteSetAttribute 0 [Mosaic] true
+;
+; [TileIndex] - determines the tile offset to be used as the first tile by the sprite image 
+;			(i.e. determines which picture the sprite uses). 
+;
+;		Instead of counting in tiles, the tile index counts in blocks of 32 bytes. As a result, in 256 colour mode 
+;			the desired tile index must be DOUBLED. Tile indices in 256 colour mode should 
+;			always be even (i.e. 0, 2, 4, 6..).
+;
+;		The tile index wraps over once it reaches 1023, back to 0.
+;
+;		Assume that sprite 0 has been setup as a 16x16 sprite. This sprite uses 
+;			4 tiles - in a 2x2 configuration (as each tile is 8x8 pixel). If the display mode for 
+;			sprites is 1 (1D mapping), and is set to use tile index 20, it uses the following tiles:
+;				-------------------------
+;				|   20   |    21    |
+;				-------------------------
+;				|   22   |    23    |
+;				-------------------------
+;
+;		If the display mode for sprites is 0 (2D mapping), and is set to use tile index 20, it uses:
+;				-------------------------
+;				|   20   |    21    |
+;				-------------------------
+;				|   52   |    53    |  		..next horizontal line starts at +32
+;				-------------------------
+;
+; 		  If the sprite is a 256 colour sprite, and it is set to use tile 510 (1D mapping):
+;				---------------------------
+;				|   510  |    511   |
+;				---------------------------
+;				|    0     |     1      | 		.. wrapped over to index 0
+;				---------------------------
+;
+;		Value : 0..1023 (even values only in 256 colour mode).
+;		Example : SpriteSetAttribute 0 [TileIndex] 20
+;
+; [RotationIndex] - when the sprite is set as a rotation/scaling sprite, this determines which of the 32 
+;				rotation banks the sprite	uses to acquire its rotation/scale information.
+;
+;		Value : 0..31 (select rotation bank)
+;		Example : SpriteSetAttribute 0 [RotationIndex] 3
+;
+;
+; [RotScale] / [SdFold]  - these two attributes are control flags which determine the 
+;					state of the sprite. They are usually used in tandem.
+;
+;		The following settings are available:
+;			RotScale = 0, SdFold = 1 : Sprite is OFF (hidden)
+;			RotScale = 0, SdFold = 0 : Sprite is ON, non-rotational
+;			RotScale = 1, SdFold = 0 : Sprite is ON, rotational (single sized)
+;			RotScale = 1, SdFold = 1 : Sprite is ON, rotational (double sized)
+;
+;		These are the only valid combinations for these attributes.
+;
+;
+; 		A double sized sprite is internally treated twice as large. This avoids "clipping" when some 
+;			images are rotated to certain angles (i.e. a square rotated to 45 degrees would appear clipped).
+;
+;		Value : 0..1 (for both flags)
+;		Example : SpriteSetAttribute 0 [RotScale] 0
+;				 SpriteSetAttribute 0 [SdFold] 0		; make normal sprite appear
+
+
+
+
+; ------------------------------------------------------------------------------
+; A simple sprite program
+;
+; This script sets up two sprites, one of which can be moved by the user.
+;
+; 1. Run the project. 
+;	- Use the cursor keys to move the red sprite around.
+;	- The blue sprite moves around automatically.
+;	- The red sprite will flip to 'face' the last movement direction.
+;
+; This concludes tutorial#7. For those interested, there are a number of exercises
+; 	listed below:
+;
+;
+; Things to tinker with:
+;	- try making the blue sprite chase the red sprite
+;	- add some extra sprites
+;	- use the tile editor to create a graphic for the sprite
+;	- add palette cycling to the sprites
+;	- use some of Tutorial#5, to add a starfield/planet tilemap background
+;	- turn this into a simple game, where the player has to avoid the blue
+;		sprite, while chasing random objects down.
+; 
+
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Main loop
+; 
+
+	; --- Move the red sprite (0) around
+	; Checks whether the input controls are being held
+	If F_IsButtonHeldPadLeft == true
+		SpriteGetAttribute 0 [Xpos] V_LV0
+		If V_LV0 > 0
+			SpriteSetAttribute 0 [Xpos] V_LV0-1
+			SpriteSetAttribute 0 [FlipHorizontal] true
+		End
+	End
+
+	If F_IsButtonHeldPadRight == true
+		SpriteGetAttribute 0 [Xpos] V_LV0
+		If V_LV0 < 240
+			SpriteSetAttribute 0 [Xpos] V_LV0+1
+			SpriteSetAttribute 0 [FlipHorizontal] false
+		End
+	End
+
+	If F_IsButtonHeldPadUp == true
+		SpriteGetAttribute 0 [Ypos] V_LV0
+		If V_LV0 > 0
+			SpriteSetAttribute 0 [Ypos] V_LV0-1
+			SpriteSetAttribute 0 [FlipVertical] false
+		End
+	End
+		
+	If F_IsButtonHeldPadDown == true
+		SpriteGetAttribute 0 [Ypos] V_LV0
+		If V_LV0 < 160
+			SpriteSetAttribute 0 [Ypos] V_LV0+1
+			SpriteSetAttribute 0 [FlipVertical] true
+		End
+	End
+
+	; --- Move the blue sprite - same idea, but random
+	V_LV0 ?= 4
+	If V_LV0 == 0		
+		SpriteGetAttribute 1 [Xpos] V_LV0
+		If V_LV0 > 0
+			SpriteSetAttribute 1 [Xpos] V_LV0-1
+		End
+	End
+
+	If V_LV0 == 1
+		SpriteGetAttribute 1 [Xpos] V_LV0
+		If V_LV0 < 240
+			SpriteSetAttribute 1 [Xpos] V_LV0+1
+		End
+	End
+
+	If V_LV0 == 2
+		SpriteGetAttribute 1 [Ypos] V_LV0
+		If V_LV0 > 0
+			SpriteSetAttribute 1 [Ypos] V_LV0-1
+		End
+	End
+		
+	If V_LV0 == 3
+		SpriteGetAttribute 1 [Ypos] V_LV0
+		If V_LV0 < 160
+			SpriteSetAttribute 1 [Ypos] V_LV0+1
+		End
+	End
+
+Return
+
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Setup simple sprite program
+; 
+
+Function Initialise 0
+
+	; setup display
+	DisplaySetAttribute [BlankDisplay] false		; show display
+	DisplaySetAttribute [EnableSprite] true			; show sprites
+	DisplaySetAttribute [SpriteLayout] true			; sprites use linear addressing (1D)
+	DisplaySetAttribute [VideoMode] 0				; standard video mode
+
+	; setup two sprites
+	Call SpriteInit 0
+	Call SpriteInit 1
+
+	; setup a palette (2x16 col banks - bank 0 & bank 1)
+	PaletteSetColour [SPRITE] 1 {31,0,0}			; pal index 1 = red
+	PaletteSetColour [SPRITE] 2 {31,31,31}			; pal index 2 = white
+
+	PaletteSetColour [SPRITE] 17 {0,0,31}			; pal index 1 = blue
+	PaletteSetColour [SPRITE] 18 {31,31,31}		; pal index 2 = white
+	
+	; create a simple image to move around
+	TileDataFillTiles [SPRITE] #_COL_16 0 4 0		; fill the first 4 tiles of sprite tile data with 0 (black/transparency)
+	
+	; generate 4 random tile gfx
+	Call TileGenerate 0
+	Call TileGenerate 1
+	Call TileGenerate 2
+	Call TileGenerate 3
+	
+	; make sprite#1 use bank#1 (diff colour)
+	SpriteSetAttribute 1 [PaletteIndex] 1
+Return
+	
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Initialise a sprite. The sprite index is passed in.
+; 
+
+Function SpriteInit 1		; sprite index (1st passed param is passed in V_EV0)
+
+	SpriteSetAttribute V_EV0 [SizeTop] #_SPRITE_SIZE16x16_TOP
+	SpriteSetAttribute V_EV0 [SizeBottom] #_SPRITE_SIZE16x16_BOTTOM	; sprite is 16x16 (2x2 tiles)
+
+	SpriteSetAttribute V_EV0 [ColourMode] 0				; 16 colour mode
+
+	SpriteSetAttribute V_EV0 [FlipVertical] false
+	SpriteSetAttribute V_EV0 [FlipHorizontal] false			; no flipping
+	
+	SpriteSetAttribute V_EV0 [TileIndex] 0					; start at tile index 0
+
+	SpriteSetAttribute V_EV0 [PaletteIndex] 0				; start with palette bank 0
+	
+	SpriteSetAttribute V_EV0 [SdFold] false					; make sprite appear, and non-rotational
+	SpriteSetAttribute V_EV0 [RotScale] false
+
+Return
+
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Generate a random tile using random colours
+; 
+
+Function TileGenerate 1		; tile index (1st param is passed in V_EV0)
+
+	V_LV0 = 200
+	While V_LV0 > 0
+		V_LV1 ?= 8												; get a random X pix 0..7
+		V_LV2 ?= 8												; get a random Y pix 0..7
+		V_LV3 ?= 3												; get a random colour 0..2
+		TileDataPixelSet [SPRITE] #_COL_16 V_EV0 V_LV1 V_LV2 V_LV3	; set a single pixel
+		V_LV0 -= 1
+	End
+
+Return
+

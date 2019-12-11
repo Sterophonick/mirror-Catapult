@@ -1,0 +1,40 @@
+; =======================================================
+; $Source: N:\\REPOS/Current/Data/Catapult/copter/Script/collide.txt,v $
+; $Date: 2003/03/14 03:39:26 $
+; $Revision: 1.1 $
+; =======================================================
+;
+; 
+; General collision routines, now using the new Catapult collide functions!
+;
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`
+; Initialise the collision tile array. All tiles except 0 are set to collide with the
+; copter (for now?)
+
+Function Collide_Initialise 0
+
+	V_LV0 = 1
+	While V_LV0 < 100
+		CollideSetTileProperty V_LV0 #CID_COPTER
+		V_LV0 += 1
+	End
+
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`
+; Collide interface function, to test new collision code.
+;
+
+Function Collide_SpriteVrsTiles 4		; x, y , width, height
+
+	; adjust x position for scrolling layer
+	V_EV0 += G_SCROLL&15
+	
+	CollideTestRegionVrsTiles #LID_TERRAIN V_EV0 V_EV1 V_EV2 V_EV3 #CID_COPTER V_LV0
+	If V_LV0 == true
+		return true
+	End
+
+Return false		; no collision
+

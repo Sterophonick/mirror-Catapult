@@ -1,0 +1,232 @@
+; =======================================================
+; $Source: N:\\REPOS/Current/Data/Catapult/copter/Script/states.txt,v $
+; $Date: 2003/03/14 03:39:26 $
+; $Revision: 1.1 $
+; =======================================================
+;
+; Contains definitions for the scrambler/copter game
+
+; ==== States ========================================================
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`
+; Game state definition
+;
+
+##GAME_STATE_MAIN			0
+##GAME_STATE_GAME			1
+##GAME_STATE_RESTART		2
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Player states (during game)
+;
+
+##PLAYER_STATE_INTRO		0
+##PLAYER_STATE_FLYING		1
+##PLAYER_STATE_CRASHING	2
+##PLAYER_STATE_OUTRO		3
+##PLAYER_STATE_FINISHED	4
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Bomb states (during game)
+;
+
+##BOMB_STATE_IDLE			0
+##BOMB_STATE_FALLING		1
+##BOMB_STATE_EXPLODING	2
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Missile states (during game)
+;
+
+##MISSILE_STATE_IDLE		0
+##MISSILE_STATE_MOVING		1
+##MISSILE_STATE_EXPLODING	2
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Explosion states (during game)
+;
+
+##EXPLOSION_STATE_IDLE			0
+##EXPLOSION_STATE_EXPLODING	1
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Object states (during game)
+;
+
+; non-collide states
+##OBJECT_STATE_IDLE			0
+##OBJECT_STATE_EXPLODING	1
+
+; collide states
+##OBJECT_STATE_ACTIVE				2
+##OBJECT_STATE_FLYING_UP			3
+##OBJECT_STATE_FLYING_UP_SLOW		4
+##OBJECT_STATE_ROLLING				5
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Powerup states
+;
+
+##POWERUP_STATE_IDLE			0			; not present/used
+##POWERUP_STATE_ACTIVE			1			; on screen
+##POWERUP_STATE_SUCKED		2			; moving towards copter
+
+; ==== Layers  ========================================================
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`
+; Background layer ID's
+;
+
+##LID_HUD					0			; text, user details (maybe some level gfx)
+##LID_TERRAIN				1
+##LID_BACKGROUND			2			; background image
+##LID_SKY					3			; sky
+
+
+; ==== Speeds ========================================================
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`
+; Movement speed constants
+;
+
+##MOVE_SPEED			2			; pixels per frame
+##BOMB_SPEED			2			; pixels per frame
+
+; ==== Palettes ========================================================
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`
+; Palette indexes for sprites
+;
+
+##PIX_COPTER			0
+
+##PIX_BOMB				1
+##PIX_MISSILE			2
+
+##PIX_OBJECT_1			3
+##PIX_OBJECT_2			4
+##PIX_OBJECT_3			5
+##PIX_OBJECT_4			6
+##PIX_OBJECT_5			7
+##PIX_OBJECT_6			8
+##PIX_OBJECT_7			9
+##PIX_OBJECT_8			10
+
+##PIX_TRANSITION			12				; for intro text
+
+##PIX_POWERUP			13				; all powerups use this set
+
+##PIX_EXPLOSION			14
+
+
+##PIX_GLOW				15				; special palette used for things are hit
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`
+; Palette indexes for tiles
+;
+
+##PIX_TILE_FONT			14				; all white for now..
+
+
+; ==== Sprites ============================================================
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`
+; Sprite indexes
+;
+
+##SIX_COPTER			0
+##SIX_BOMB1			1			; dropped weapons
+##SIX_BOMB2			2
+##SIX_BOMB3			3
+##SIX_MISSILE1			4			; fired (horiz) weapons
+##SIX_MISSILE2			5
+
+; sprites for smoke trails
+##SIX_BOMB1_SMOKE		10
+##SIX_BOMB2_SMOKE		11
+##SIX_BOMB3_SMOKE		12
+##SIX_BOMB1_missile		13
+##SIX_BOMB2_missile		14
+
+; sprite for trip meter
+##SIX_TRIP_METER		14
+
+; sprite for transition text
+##SIX_TRANSITION_TEXT	15
+
+; sprites for explosions
+##SIX_EXPLOSION_1		20			; first explosion (assume 10 for now)
+
+; sprites for objects (two sprites per object)
+##SIX_OBJECT_1			40			; first object (assume 20)
+
+; sprites for powerups
+##SIX_POWERUP			80			; no more than 20 at a time (normally less)
+
+; ==== Tiles ============================================================
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`
+; Tile indexes (sprites)
+;
+
+##TIX_COPTER_IDLE_1		0		; copter is 64x32 = 8x4 tiles
+##TIX_COPTER_IDLE_2		32
+##TIX_COPTER_IDLE_3		64
+
+##TIX_POWERUP_BEAM	96		; powerup is 2x2
+##TIX_POWERUP_BEAM1	100		; powerup is 2x2
+##TIX_POWERUP_BEAM2	104		; powerup is 2x2
+
+##TIX_BOMB				256		; bomb is 2x4
+##TIX_MISSILE			264		; missile is 1x1
+
+##TIX_TRIP_INDICATOR		265		; 1x1
+
+##TIX_EXPLOSION_1		270		; explosion is 2 frames, 2x2 (for now)
+##TIX_EXPLOSION_2		274
+##TIX_EXPLOSION_3		278
+
+##TIX_SMOKE_PLUME		282		; 2 frames of 2x2
+
+; 300 + objects go here.. see obj tilelist
+ExternScript "TLIST_OBJ"
+
+##TIX_TRANSITION_TEXT	976		; text, 1x8x4
+
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`
+; Tile indexes (background)
+;
+
+; keep 0 as the 'blank' index
+##TIX_CITY_BLOCK_1		1		; 2x2
+
+##TIX_CHOPPER_LIVES		128		; 1x1x1
+
+##TIX_TIP_METER			129		; 2x1x1
+
+##TIX_POWER_METER		136		; 4x1
+
+##TIX_FONT_1			144		; ??
+
+##TIX_BACKGROUND_SKY	224		; lots of tiles..
+
+; ==== Collision ============================================================
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`
+; Collision indexes
+;
+
+##CID_COPTER		1		; any tile set to this, will collide with the copter, bombs or missiles
+
+; ==== HUD ============================================================
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`
+; HUD positions
+;
+
+##TRIPMETER_YPOS 19
+##TRIPMETER_XPOS 7
+##TRIPMETER_XLEN 15
+##TRIPMETER_XEND 23
+

@@ -1,0 +1,51 @@
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;  setup a barrel sprite
+; 
+
+Function Barrel_Setup 1
+
+	; the number passed is the barrel number, convert this to sprite number
+	V_EV0 += 1
+
+	; Macro - hit ^M to see macro editor
+	%SPRITESIZE_32 V_EV0
+	SpriteSetAttribute V_EV0 [paletteIndex] 0
+	SpriteSetAttribute V_EV0 [ColourMode] 0
+	SpriteSetAttribute V_EV0 [sdFold] false
+	SpriteSetAttribute V_EV0 [rotScale] true
+	SpriteSetAttribute V_EV0 [tileIndex] 0
+	SpriteSetAttribute V_EV0 [rotationIndex] 0
+	SpriteSetAttribute V_EV0 [RenderLayer] 2		; in front of front layer, behind title layer and barn
+
+	%SPRITE_SETPOS V_EV0 20 20
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;  move a barrel along a predetermined path
+; 
+
+Function Barrel_Move 1	;barrel num
+
+	;;; make the barrels 2 seconds apart when appearing
+	V_LV0 = V_EV0-1
+	V_LV0 *= 120
+
+	;;; work out the time index into the path data (in ticks)
+	V_LV1 = G_GAMETICK
+	V_LV1 += V_LV0
+	V_LV1 *= G_LEVEL
+	V_LV1 %= G_BARREL_PATH_LEN
+
+	;;; get the barrel pos from the path data
+	PathGetPos PATH_BARREL V_LV1 V_LV2 V_LV3
+
+	; store positions in array for speed
+	Array1DSetElement BarrelPos.x V_EV0 V_LV2
+	Array1DSetElement BarrelPos.y V_EV0 V_LV3
+
+	; adjust visible position to move "hot spot" to top left of barrels
+	V_LV2 += 10
+	V_LV3 += 10
+
+	%SPRITE_SETPOS V_EV0+1 V_LV2 V_LV3
+Return

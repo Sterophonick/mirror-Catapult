@@ -1,0 +1,175 @@
+;
+; Tutorial #12 - Levels & Level Editing - (Vers 2, 15/03/04)
+;	Written by J.Roby, edited by M.Shamgar
+;
+
+;--------------------------------------------------------------------------------------------------------------
+; This tutorial teaches you:
+;
+; i.The functions of the level editor
+; ii. How to modify an existing level
+; iii. How to make a level from scratch
+;
+;
+
+
+;--------------------------------------------------------------------------------------------------------------
+; (i). The functions of the level editor
+; ======================================
+;
+; The level editor enables you to create, modify and manage levels for projects created in the
+; Catapult environment. But, what is a level? well, a level in catapult is an area of overlayed
+; tilemaps. As you may have read in tutorials 04 and 05, tilemaps are composed of tiles, so a level
+; can be though of as several layers of tiles placed over one another like this bad ASCII art shows :)
+;
+; (note: each level is actually treated as an individual layer.. so three layers is actually three levels)
+;
+;  ---------------------------------
+;  |                               | Layer 3
+;  |  --------------------------------
+;  |  |                              | Layer 2
+;  |  |  -------------------------------
+;  |  |  |                             | Layer 1
+;  |  |  |                             |
+;  |  |  |                             |
+;  |  |  |                             |  __
+;  |  |  |                             |  |\
+;  |_|  |                             |    \
+;     |  |                             |  LOOKING THIS WAY
+;     |_|                             |
+;        |                             |
+;        |______________ |
+;
+; I'm using the freeware version of Catapult to write this tutorial and there is one restriction on
+; the level editor in the freeware version, which only allows 1 layer of the level to be modifed, so
+; we'll only be using 1 layer in this tutorial but I'm sure the information learned in this tutorial can
+; be scaled up for multiple layers in the full version.
+;
+; (note: currently, each level/layer must be edited individually.. but the export version allows several
+; levels to be visible at once within the level editor.)
+;
+
+; so, now we know what levels are, how about we get our hands dirty on an actual level?
+;
+;
+
+
+;--------------------------------------------------------------------------------------------------------------
+; (ii) Modifying existing levels
+; ==============================
+;
+; For this part of the tutorial, we'll be modifying the "Highway" demo level to show some of the features
+; of the level editor. The first thing you'll probably want to do is backup your directory holding the 
+; Highway demo. In your catapult directory, make a copy of the highway directory and call it "highway2" or
+; a name other than "Highway". This is your good version of the project that we'll copy back over into the highway
+; directory at the end of this tutorial to erase our level editing skills :).
+;
+; Ok, Highway is now backed up, so we can now start:
+; 1) If you haven't already, start Catapult.
+; 2) Select the Highway project in the project browser window.
+; 3) Execute the demo (F5) and pause/stop it immediately (Control-Space, or F5).
+;
+; Right, you should now have highway paused on your Emulator screen. To display the Level Editor, either press
+; (Control-L) or in the main Catapult window, Find the Assets menu item between View and Execute, select it and select
+; Levels in the menu. This should display three more windows called "Level Editor", "Level Canvas" and "Level Stamps" or "Level Tiles".
+;
+; Welcome to the level editor!
+;
+; The "level editor" window contains the important level information, such as name and size as well as tile and palette
+; information. The "level canvas" shows you how the whole level will look and is the window most of the level modifications
+; will be made in. The "level tiles/stamps" window can display "Stamps" or "tiles". Tiles were covered in Tutorial 04, so if you need
+; a refresher course, you could go look at tutorial 04. Stamps are blocks of tiles that can be used to reduce the tedium of having to
+; click each tile into place. For example, say you are writing a scrolling sports game in catapult that has a background of fans in a stadium.
+; You can use tiles to make a block of tiles to be repeated across the level and then create a stamp using this block and stamp across
+; the level canvas to create a stadium of fans!
+;
+; Now we're going to modify the background level for highway. If you scroll across the level as it is now, you'll see a dark background
+; and along the bottom is...well, something :) I think it looks like faraway industrial buildings, but that's just me.
+; Ok, switch the Tiles/Stamps window to show the tiles available. You should be able to see the numbers from 0 to 9 if this is true.
+; The first modification we're going to make is to display the numbers on the background as this is quite a good experiment and you
+; should be able to tell if it worked as the numbers would show up. Select the tile holding the number 0.
+;
+; In the Level Canvas window, go to the top left corner and you should see what looks like a gray background with a line
+; of clouds. Move the mouse over the canvas and you should be able to see a small square selection box moving with the mouse pointer,
+; This will show you where the tile will be placed, so in the space under the clouds, find a tile you'd like to change and press the
+; left mouse button one. What happened? you should see the number 0 on your canvas now.
+;
+; Congratulations! you've modified the Highway background!
+;
+; If you didn't get the number 0 on your canvas, keep trying and make sure you selected the tile in the Level Tiles window.
+; now you know how to make modifications, you can go ahead and make as many modifications as you like using any tiles you like.
+; don't worry, I'll wait until you've finished.....
+;
+; Ok, all finished? now to check out our masterpiece. In the Catapult Toolbar, find the Reset button, its the big red button to the
+; right hand side. The Emulator screen should go blank, but it's ok. Now run the highway demo again by pressing F5 or using the menu.
+; Do you see your modified level? If you don't, try adding tiles again. If that still doesn't work, quit Catapult and restart Catapult
+; and try again.
+;
+; Now, the modifications you've made are held in memory in the IDE, so if you quit Catapult, you'd lose your changes. Luckily, to save
+; your changes all you have to do is press (Control-S) or use "Save All" in the File menu on the main window. As we backed up Highway
+; before, you can now save your modifications, quit and restart Catapult, load up the highway project and start it up and you should
+; see your changes yet again!
+; There are many ways you can experiment with the level editor and many things that I haven't covered so far. If you change the width of 
+; the level LEVEL_BACKGROUND and press the button labeled "Resize" and then reset the emulator, you'll see that the first half of the
+; background should be the original background, but if go further on in the demo, the background turns to a dark gray. This is because
+; in the script code, we tell the GBA to display the level as 64x64 tiles, as LEVEL_BACKGROUND has been designed, so resizing LEVEL_BACKGROUND 
+; to 32x64 would mean that the Emulator/GBA displays the 32 tiles in the level and Catapult shows the remaining space with tile index 0,
+; which in the case of Highway is a dark gray coloured tile.
+;
+; Ok, question - does anyone want to make their own level for Highway?
+; I thought so :)
+;
+; iii. making a level from scratch
+; =====================================
+;
+; To do this, In the "Level Editor" window, press "Create" which should add a new item to the list at the top of the window. Using the "Name"
+; box on the right, rename the level to.....hmmmmmmm....LEVEL_WIBBLE and click in the list on the left. The name should now be changed from
+; whatever it was before to LEVEL_WIBBLE.
+; Now to start editing the graphics, when you created the level, you may have noticed that the canvas turned to dark gray/blue. that's because
+; it defaulted to tile 0 to cover the entire canvas and tile 0 is plain dark blue/gray in colour. Also, when a new level is created, the tilemap
+; used is set by default to 0, so in the Level Editor in the second section from the top labeled "Tiles" set "Tile Bank" to 2 like the background
+; level and make sure that the tiles are 16 colours by checking the box next to "Tile Bank". If you need to set the "Level Stamps" window to
+; "Level Tiles" and you should see all the tiles you were using for the original background level. Lets go ahead and make some new tiles to use
+; in out new level.
+;
+; We'll use the 4 blank tiles after the digits in the tile list. Get out of the level editor as we won't need that when editing tiles, and go to
+; the tiles by pressing (Control-4). You should see the Tile View window. Make sure that your seeing the Background tiles and that they're being
+; displayed in 16 colours. In the box marked "Tile List" you can see the tiles themselves, so using the scrollbar on the right scroll down about half
+; way until you see the digit tiles we used before. Also, bring up the palette (Control-2) as we can edit the colours of the tiles.
+;
+; Double click the left mouse button on the first tile after the numbered tiles and another window should appear. This is the tile itself, ready for
+; editing. In the palette window, make sure the palette is set to "Background" and select any of the colours on the topmost row (we can only use the
+; first 16 colours), go back to the Tile Editor window, select one of the tool buttons on the left of the window and away you go! You can make the
+; tiles anyway you would like to using any of the 16 colours.
+;
+; To save the tiles permanently, find the Load/Save section in the Tile Viewer in the bottom left of the window. What we are going to do is to 
+; save the row of tiles with the digits on it and our new tiles as one image. The original Highway demo saves this entire row like this currently, so
+; no new script will be needed to load these tiles. To accomplish this, left click on the first tile in the row, the blank tile before the number 0 and
+; press the "mark" key in the Load/Save section which is level with the Start box. The number in the box next to the word "Start" should have changed to 
+; the number 1024. This is the offset of the tile you just clicked on, so select the last tile in the row, the other blank next to your newly painted 
+; tiles and press the other "mark" button in the Load/Save section.
+; The box next to the word "End" should have changed to 1039. we have just selected a range of tiles to save to a single image that will be loaded into
+; Catapult when the demo starts. Now, to save the row of tiles, use the left most button at the bottom of the Load/Save section. If you keep the mouse
+; pointer over the button for a few seconds, a piece of text should be displayed which says "Save displayed tiles to disk as a single image (i.e. image
+; size determined by display settings)", this is the button to press. A save file dialog should be displayed for you to select where to save the tile 
+; image to. Find the Tiles directory in the Highway resources directory and save the file as "tiles_digits.bmp". There's already a version in that 
+; directory (the original row), so overwrite the image as we do have a backup copy, remember?.
+;
+; After you've edited those 4 tile how you would like and saved them, we can now add them into the level. Close the Tile viewer and palette viewer and
+; open the level editor (Control-L). In the list of levels, select your new LEVEL_WIBBLE and the canvas should change to the all-blue tiles. In the 
+; "Level Tiles/Stamps" window select one of your new tiles you just made, go to the level canvas and start drawing with the tiles. At the top of the
+; level canvas are some button which are the drawing tools. you should see one with an image of a pen on it and it should be selected. This means your
+; using the tiles like an ink to draw with.
+;
+; After you have made your modifications to the new level, save all your new work (Control-S) and we'll modify the code so we use our new level instead
+; of the original highway level. Close the level editor and now open the script file named "display.txt". In this file, find a function called 
+; "DrawBackground", Its near the end of the file. You'll see that there's one line in this function that displays the level which is named. In the original
+; Highway code, this level is LEVEL_BACKGROUND, the level we added some modifications to at the beginning. Change LEVEL_BACKGROUND to LEVEL_WIBBLE or
+; whatever name you decided to use for your new level above. Now press (Control-S) to save your changes, Reset the emulator (the big red button near the
+; right side of the Tools toolbar) and start the emulator again. Notice anything different? you should now be able to see your own level being used as the
+; backdrop for the highway demo.
+;
+; That's the end of this tutorial on levels. To finish, you can close Catapult and delete the highway directory and then rename your backup version you 
+; made earlier to "highway" as this should get you back to the original highway demo.
+; Hopefully, this tutorial got you closer to making your own levels than you were at the start of this tutorial :)
+;

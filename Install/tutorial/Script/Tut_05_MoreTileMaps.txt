@@ -1,0 +1,313 @@
+;
+; Tutorial #5 - More TileMaps (Vers 2 - 10/02/04)
+;	Written by M.Shamgar
+;
+; This tutorial teaches you : 
+;
+; i. Load and display a picture by using the ImageProcessor and the resource manager.
+; ii. Setting up multiple Tilemap layers.
+; iii. Smooth (pixel) scrolling of Tilemaps.
+; 
+
+; ------------------------------------------------------------------------------
+; Image Processor / Resource Manager
+;
+; The first thing to do is learn some of the basics of the Image Processor.
+;
+; The Image Processor (or IP for short) is a tool that helps you convert a image into tiles and
+; 	TileMaps. We will look at more advanced uses of it later.
+;
+; In the resource\Images folder for this project, is a file called 'planet.bmp'. We are going to use the
+; 	IP to convert this into a set of tiles, and then generate a TileMap for the image.
+;
+; (!! To easily browse a project for resources, open the Resource Manager (select "Resources" from the
+; 	Assets menu), then click on 'Explore".)
+;
+; The bitmap we are working with is a 256 colour image. We will load the background palette from the image itself. 
+; The image only uses a portion of the 256 colour palette (in this case the first 160 colours). 
+; This allows us to use the remainder of the palette for different 16 colour tiles.
+;
+
+; ------------------------------------------------------------------------------
+; 1. Open the IP (Select "Image Processor" from the Tools menu).
+;
+; 2. Click on the 'Open' button, and find the planet image in the Resources/Image folder.
+; 	The planet should now appear in the image box, in the top/right.
+;
+; 3. Select part of the planet, by dragging a rectangle over the image. This selection is the portion of the
+; 	image that will appear on the screen.  
+;
+; If you want to select the entire image, click on the "Select All" button.
+;
+; Because the GBA works with tiles, the size of all images used MUST be a multiple of 8 pixels (i.e. 64x32).
+; 	An easy way to force this, is by clicking on the "Snap to tile boundaries" button. This will ensure all 
+;	selection regions are always a multiple of 8 pixels.
+;
+; 4. Click on the "Add To List" button.
+; 	This will break the selected part of the image up into 8x8 pixel tiles, and add each one to the list of tiles.
+; 	Scrolling through the list of tiles, it can be seen that a lot of the tiles are identical.
+;
+; 	The IP can analyse this list, and remove identical (or similar) tiles. More on this shortly..
+; 
+; 5. Click on the "Save 8bit Tiles and Tilemap" button'. 
+;	- under the 'Resources' folder, enter "planet_tiles" for the image filename.
+;	- enter "planet_tilemap" for the filename of the Tilemap.
+;
+
+
+; ------------------------------------------------------------------------------
+; Below we have a script (almost) ready to display this image. Note that background 0 is setup to handle
+; 	256 colour tiles (instead of 16 colour tiles). It is not possible to mix both 256 and 16 colour tiles on the one
+; 	TileMap layer/background.
+;
+
+; ------------------------------------------------------------------------------
+; Adding new resources through the Resource Manager
+;
+; Next, we use the Resource manager to add two new resources to the project (one for the planet tiles, one for the planet
+; TileMap).
+;
+; 1. Open the resource manager (press Control^R, or select "Resources" from the Assets menu).
+;
+; 2. Click on the "Clone" button to duplicate an existing resource (i.e. create a new resource).
+;
+; 3. Change the ID of the newly created resource to "RID_TILE_PLANET". 
+;	(RID stands for 'Resource ID', but in your project you can use whatever you want).
+;
+; 4. Change the Type of the resource to 'Bitmap 256'.
+;
+; 5. Use the browse button, and select the "planet_tiles.bmp" file you saved earlier via the IP.
+;	(the compression setting should be ignored for now).
+;
+; 6. Repeat steps 1..5, but this time for a palette resource:
+;	- ID is "RID_PAL_PLANET"
+;	- Type is "PaletteRaw256"
+; 	- Browse to the same file (i.e.  "planet_tiles.bmp")
+;
+; 7. Repeat steps 1..5 again, for a TileMap resource:
+;	- ID is "RID_TILEMAP_PLANET"
+;	- Type is "TileMap"
+; 	- Browse to the TileMap file - "planet_tilemap.ctm" (.ctm stands for Catapult TileMap)
+;
+; 8. Remove the semi-colons " ; ", in the "Initialise" function below the ***. 
+;	These lines load the palette, tilemap and tileset. 
+;
+; 9. Run the project!. With any luck, you should see a planet on the screen.
+;
+;
+
+
+; ------------------------------------------------------------------------------
+; This is a good point to experiment with the IP. Some things to try include:
+;	- use other (256 colour) images instead of the planet
+;	- select different regions of the image
+;	- try the "Duplicate Removal Settings" options.. use the "Preview" buttons to see how they work.
+;	- Use the 'threshold' setting to shrink the number of tiles used by the planet
+; 
+; Also try changing some the X/Y parameters in the "TileMapLoad" command to load the planet 
+; into different regions of the screen.
+;
+;
+
+
+; ------------------------------------------------------------------------------
+; Adding a 2nd Tilemap layer / background
+;
+; Now that we have a planet on the screen, lets add a basic starfield as a backdrop to the planet.
+;
+; Firstly, lets create some palette colours for the star. Whites, and bright blues work well. 
+;
+; 1. Open the palette viewer.
+; 
+; 2. Switch to background mode.
+;
+; 3. Change three colours in the palette:
+;	- change index 161, to a bright white
+;	- change index 162, to a bright blue
+;	- change index 163, to a duller blue
+;
+; 	Index 160, will be used as the transparent index. As this is going to be a 16 colour image, the first 
+;	colour in the palette bank is index 160 (which is treated as index 0.. transparent!).
+;
+; 4. Open the Tile Viewer. You will notice that the planet has taken some 1100 tiles up! This is because you are 
+;	looking at 256 colour tiles in 16 colour mode. (256 colour graphics/tiles take double the memory that 16 colour
+;	tiles use - just another advantage of using 16 colour mode more often!).
+;
+;	Switch to 256 colour mode, and only 560 tiles are used.
+;
+; 5. Switch back to 16 colour mode, and select tile index 1200. Also select palette bank 10 (which uses palette 
+;	indices 160..175).
+;
+; 6. Enter paint mode (i.e. open the Tile Editor) and draw a star in this tile.
+;	- change the background colour to something dark (click on 'bcol' within the tile editor)
+;	- make sure you draw the star in 16 colour mode.
+;	- The tile layout should be 8x8 (i.e. a single tile).
+;	- A good way to draw a simple star, is to place a white pixel in the middle of the tile, 
+; 		then the next brightest blue to all four sides of the white pixel and the same again for the darker blue.
+;
+; 7. Use the tile viewer to save this tile as an image. Make sure the star tile is currently selected (you will
+;	see it within the preview window), then click on "Save Tile Selection" to save it out to disk as a bitmap.
+;	Enter "star_tile" as the filename for the star. 
+;
+; 8. Open the resource manager, and create a new (bitmap) resource:
+;	- ID is "RID_TILE_STAR"
+;	- Type is "Bitmap 16"
+; 	- Browse to the "star_tile" bitmap just saved.
+;
+; 9. Repeat step 8, this time for the palette of the star:
+;	- ID is "RID_PAL_STAR"
+;	- Type is "Palette 16"
+; 	- Browse to the "star_tile" bitmap just saved.
+
+
+; ------------------------------------------------------------------------------
+; The next step is setting up a 2nd background layer to the screen.
+;
+; 1. Add these lines to the Initialise function (remember to remove the semi-colons!):
+;
+; .................................
+;
+; 	DisplaySetAttribute [EnableBG1] true			; enable layer 1
+; 	TileMapSetMapBank 1 30					; make layer 1 use map bank 30
+;
+; 	TileMapSetPriority 1 0						; make the new layer appear on top of the planet layer
+; 	TileMapSetPriority 0 1
+;
+; 	TileMapSetTileBank 1 2						; make the new layer use tiles starting from index 1024
+;
+; .................................
+;
+; 2. Add these lines as well (to the bottom of the Initialise function):
+;
+; .................................
+;
+;	TileDataLoad [bg] RID_TILE_STAR 1200 0			; load tile star into tile 1200
+;	PaletteLoad [bg] RID_PAL_STAR 10				; load star palette into bank 10 (palette indices 160..175)
+; 
+; 	; Fill background 1 with the star tile
+;	TileMapFillRect 1 [All] 0 0 32 32 176				; we cannot address more than 1024 tiles in a layer.
+;                                                                                         	; So we make this layer use TileDataBank 2 - which
+;                                                                                         	; starts the tile index at 1024. 1024+176 = 1200.
+;
+;	TileMapFillRect 1 [Palette] 0 0 32 32 10				; make the star layer use palette bank 10
+;
+; .................................
+;
+; 3. Run the project!
+
+
+
+; ------------------------------------------------------------------------------
+; You should now have a starmap over the planet. It doesn't look very good, as it is very regular and there
+; are too many stars. To make it look better, we are going to use a loop and generate some random
+; positions for the stars. You will see more about variables later. 
+; 
+; The '?=' operator, generates random numbers.
+;
+
+; ------------------------------------------------------------------------------
+; 1. At the bottom of the Initialise function, add this line to clear background#1:
+;
+;	TileMapFillRect 1 [All] 0 0 32 32 177				; 177+1024 should be a empty tile
+;
+; 
+; 2. Then under the above line in the Intialise function, add these commands. This loop will generate some random stars:
+;
+;
+; .................................
+;
+; 	V_LV0 = 100										; number of stars to generate
+; 	While V_LV0 > 0
+;		V_LV1 ?= 32									; generate random x/y position for the star (0..31, 0..31)
+; 		V_LV2 ?= 32
+;
+;		; draw a star at V_LV1,V_LV2
+;		TileMapSetAttribute 1 V_LV1 V_LV2 [All] 176
+;		TileMapSetAttribute 1 V_LV1 V_LV2 [Palette] 10
+;		V_LV0 -= 1
+; 	End
+;
+; .................................
+;
+; (the previous two FillRect commands from the previous section are now not needed, and can be removed).
+;
+; 3. Run the project. You should see a random scattering of stars (and each time you run it, the positions will change).
+
+
+; ------------------------------------------------------------------------------
+; Moving the stars
+;
+; The last thing we are going to do in this tutorial is the easiest! By pixel scrolling the star 
+; tilemap, we will get a nice effect of stars moving by.
+;
+; 1. Insert the following commands above the 'Return' statement in the main loop (not in the Initialise
+; 	function!):
+;
+; .................................
+;
+; 	G_VAR00 += 1							; this is a global variable - its value is remembered between script cycles
+; 	G_VAR00 &= 511						; the limit for offseting a TileMap is +/-511 pixels in the x direction, and +/-255 pixels in the y direction.
+; 										; by anding  (&=) the variable with the limit, we stop the variable from ever exceeding 511 and causing an error.
+;
+; 	TileMapSetOffsetX 1 G_VAR00			; set the x pixel offset for background 1
+; 
+; .................................
+;
+;
+; 2. Run the project. Your starfield should be scrolling nicely!
+;
+
+
+
+; ------------------------------------------------------------------------------
+; Things to tinker with in this tutorial:
+;  - as a challenge, see if you can get the planet in front of the stars! The black region around the planet
+;    	needs to be changed to palette index 0.
+;
+;  - change the random star generation algorithm, make different patterns of stars
+;
+;  - generate some stars while the script is running
+;
+;  - make the stars move in different directions
+;
+;  - make the stars palette cycle
+;
+;  - add a third layer (of stars), and make them move in a different direction/speed to the current layer.
+;
+;
+; Next, we are off to tutorial 6...  where we learn about variables for the first time.
+; 
+
+
+
+; =============================================================================================
+; main loop - do nothing (for now)
+
+	; extra commands inserted below here, and above the return
+
+Return
+
+
+; =============================================================================================
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Initialise function - setup display, and load stuff
+; 
+
+Function Initialise 0
+
+	DisplaySetAttribute [BlankDisplay] false	; enable display
+	DisplaySetAttribute [EnableBG0] true		; turn background 0 on
+
+	TileMapSetColourMode 0 true			; make background 0 a 256 colour layer
+	TileMapSetMapBank 0 31				; make the TileMap in background 0, use memory away from the tiles
+	
+	; --- load palette, tilemap & tileset
+	
+	; ***
+	TileDataLoad [bg] RID_TILE_PLANET 0 0
+	PaletteLoad [bg] RID_PAL_PLANET 0
+	TileMapLoad 0 RID_TILEMAP_PLANET 0 0
+
+Return 
+

@@ -1,0 +1,122 @@
+; =============================================================================================
+; CATAPULT BITMAP DRAW FUNCTION DEMO
+; Written by James Hudson
+;
+; Demonstrates simple 2D graphics using the GBA bitmap modes and Catapult bitmap drawing routines.
+;
+; Things to note (fixes introduced with V1.31b) :
+;
+; i. Display attribute 'BlankDisplay' must be disabled before anything will appear.
+; ii. Each bitmapped mode corresponds to background 2.. it must be enabled for the display to appear.
+; iii. This demo uses one of the page flipping modes. The draw commands *always* (for now?) draw to the
+; page that is OFFSCREEN. Once drawing is complete, the pages should be flipped.
+;
+; =============================================================================================
+
+; === Code Begins ==========================================================================================
+
+	; render the gfx
+	PaletteCycle [bg] 0 255
+	Call Main_Render
+	
+	; flip to other display page
+	DisplaySetAttribute [PageFlip] G_TICKS&1
+
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; render the gfx
+; 
+
+Function Main_Render 0
+
+	; bounce the vertices around the screen
+	V_LV0 = 0
+	While V_LV0 < 5
+		bounce.x[V_LV0] += bounce.vx[V_LV0]		
+		bounce.y[V_LV0] += bounce.vy[V_LV0]
+		
+		; if vertices hit a wall, bounce them in the opposite direction		
+		
+		If bounce.x[V_LV0] <> 0 240
+			bounce.vx[V_LV0] *= -1
+		End
+		
+		If bounce.y[V_LV0] <> 0 160
+			bounce.vy[V_LV0] *= -1
+		End		
+		
+		V_LV0 += 1
+	End
+
+	V_LV2 = G_TICKS
+	V_LV2 >>= 2
+	V_LV0 Bounce G_TICKS 511
+	V_LV1 Bounce V_LV2 511	
+	DrawTriangle bounce.x[2] bounce.y[2] bounce.x[3] bounce.y[3] bounce.x[4] bounce.y[4] V_LV1
+	DrawLine bounce.x[0]  bounce.y[0]  bounce.x[1]  bounce.y[1] V_LV0
+
+ 
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; pass a number, get a cycling rgb rainbow colour back
+; 
+
+Function GetRainbowColour 1 ; num
+	V_EV0 Bounce V_EV0 127
+
+	V_EV0 &= 63
+	V_LV0 Bounce V_EV0 63
+	V_LV1 = 63
+	V_LV1 -= V_EV0
+	
+	V_EV0 -= 32
+	V_LV1 -= 32
+	
+	V_EV0 Max V_EV0 0
+	V_LV0 Max V_LV0 0	
+	V_LV1 Max V_LV1 0	
+
+Return V_EV0 V_LV0 V_LV1
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Set up the program, called once by the Catapult engine.
+; 
+
+Function Initialise 0
+	DisplaySetAttribute [BlankDisplay] false
+	DisplaySetAttribute [VideoMode] 4	;240x160x8bpp bitmap mode
+	DisplaySetAttribute [EnableBG2] true
+
+	; --- set up the palette with a red/green/blue rainbow
+	V_LV0 = 0
+	While V_LV0 < 256
+	
+		V_LV1 = V_LV0
+		V_LV1 >>= 1
+
+		Call GetRainbowColour V_LV1
+		DrawSetColour V_RV0 V_RV1 V_RV2 V_LV5
+		PaletteSetColour [bg] V_LV0 V_LV5
+	
+		V_LV0 += 1
+	End
+
+	; --- set up some random vertex positions	
+	V_LV0 = 0
+	While V_LV0 < 5
+		bounce.x[V_LV0] ?= 240		
+		bounce.y[V_LV0] ?= 160
+		
+		bounce.vx[V_LV0] ?= 1
+		bounce.vy[V_LV0] ?= 1
+		bounce.vx[V_LV0] <<= 2
+		bounce.vy[V_LV0] <<= 2
+		bounce.vx[V_LV0] -= 2
+		bounce.vy[V_LV0] -= 2
+		
+		V_LV0 += 1
+	End
+Return
+

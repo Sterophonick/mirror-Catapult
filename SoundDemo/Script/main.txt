@@ -1,0 +1,89 @@
+;
+; *** SoundDemo ***
+;
+; Catapult extended sound demo. Requires Catapult v1.40b or later.
+; Demonstrates some of the new sound features available in Catapult v1.40b.
+;
+; This demo uses just a single sound sample, generated through the sound editor.
+;
+;
+; Catapult now supports up to 32 sound channels. These channels can either be used for sound effects or for music playback.
+; This demo has one looped-extended sound effect playing, as well as an recurring normal sound effect.
+;
+; The looped effect changes its pitch by adjusting the playback frequency on this channel in real-time. It also changes its
+; left/right panning ratio.
+
+; Controls:
+; 	Use PageUp / Down (GBA shoulder left/right) to control the volume of the looping sound
+; 	Use A / S (GBA button A,B) to control the frequency change rate for the looping sound
+;
+; 
+
+; =============================================================================================
+
+; system sound definition for 'keep existing value'
+##SPC			#_SOUND_PARAM_CURR		; shorter string, makes the code cleaner!
+
+; =============================================================================================
+; ---- main loop starts here
+
+	; --- control volume
+	If F_IsButtonHeldShoulderLeft == true
+		G_VOLUME Max G_VOLUME-1 0
+	End
+
+	If F_IsButtonHeldShoulderRight == true
+		G_VOLUME Min G_VOLUME+1 64
+	End
+
+	; --- control freq multiplier
+	If F_IsButtonHeldButtonA == true
+		G_CHANGE_SPEED Max G_CHANGE_SPEED-1 1
+	End
+
+	If F_IsButtonHeldButtonB == true
+		G_CHANGE_SPEED Min G_CHANGE_SPEED+1 100
+	End
+
+	; --- make freq vary between 0..32767, in a up/down pattern based on tick & multiplier
+	V_LV0 = G_TICKS
+	V_LV0 *= G_CHANGE_SPEED
+	G_FREQ Bounce V_LV0 65535
+	G_FREQ += 1
+
+	; make panning vary between left to right..
+	V_LV0 = G_TICKS
+	V_LV0 /= 10
+	G_PANNING Bounce V_LV0 511
+
+	; channel 0 has the looping sound
+	SoundSetProperties 0 G_FREQ G_PANNING G_VOLUME #SPC #SPC #SPC #SPC #SPC
+
+	; --- a single 'normal' play sound (centre, full volume)
+	V_LV0 = G_TICKS
+	V_LV0 %= 100
+	
+	If V_LV0 == 0
+		SoundPlay RID_SND_SINE
+	End
+	
+Return
+
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Main initialise function. Looping sounds are started
+; here, and then controlled through the main loop.
+; 
+
+Function Initialise 0
+
+	G_CHANGE_SPEED = 20
+	G_FREQ = 10000
+	G_VOLUME = 64
+	
+	; start playing a looping sound on channel 0
+	SoundExPlay RID_SND_SINE G_FREQ #_SOUND_PANNING_MIDDLE G_VOLUME 0 #_SOUND_LOOP_FORWARD -1 0 0 0 V_LV0
+	
+Return
+
+

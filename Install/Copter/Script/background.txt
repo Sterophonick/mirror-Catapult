@@ -1,0 +1,119 @@
+; =======================================================
+; $Source: N:\\REPOS/Current/Data/Catapult/copter/Script/background.txt,v $
+; $Date: 2003/03/14 03:39:26 $
+; $Revision: 1.1 $
+; =======================================================
+;
+; 
+; Display and handling of the backgrounds in the copter game
+;
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Animate/change the background during gameplay
+;
+
+Function Background_FrameTick 0
+
+	; scroll the sky background slowly..
+	V_LV0 = G_TICKS
+	V_LV0 >>= 4
+	V_LV0 &= 255
+	
+	; background stiches together over a complete screen
+	TileMapSetOffsetX #LID_SKY V_LV0
+
+	; ..and the background image twice as fast
+	V_LV0 = G_TICKS
+	V_LV0 >>= 1
+	V_LV0 &= 511
+	G_BACKGROUND_OFFX = V_LV0
+	
+	TileMapSetOffsetX #LID_BACKGROUND V_LV0
+	
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Initialise any backgrounds for the level
+; Happens once at game startup
+;
+; Replaced old flat background with bitmapped background.
+; Starts as a 24bit image:
+; a. Place through the pal processor to convert into a temporary 4bit image
+; b. Feed through the image processor to convert into a Tilemap, and reduce
+;  as many tiles as possible
+
+Function Background_Initialise 0
+
+	; load background tiles into memory
+;	TileDataLoad [bg] RID_IMAGE_SKY #TIX_BACKGROUND_SKY 0
+	TileDataLoad [bg] RID_IMAGE_SKY1 #TIX_BACKGROUND_SKY 0
+
+	; load background palette (uses bank 15)
+;	PaletteLoad [bg] RID_PAL_SKY 15
+	PaletteLoad [bg] RID_PAL_SKY1 15
+
+	; set palette for level (can change over time..)
+;	PaletteSetColour [bg] 17 {17,10,1}
+;	PaletteSetColour [bg] 18 {23,15,20}
+;	PaletteSetColour [bg] 19 {11,11,11}
+
+	; Load tilemap1 into background
+	TileMapLoad #LID_BACKGROUND RID_TILEMAP_BACK1 0 0
+
+	; make background use palette 1
+	TileMapFillRect #LID_BACKGROUND [Palette] 0 0 32 32 1
+	
+	; setup background
+	TileMapLoad #LID_SKY RID_TILEMAP_BG1 0 0
+	TileMapFillRect #LID_SKY [Palette] 0 0 32 32 15
+	
+	; adjust background to start at this tile offset
+	V_LV0 = 0
+	While V_LV0 < 32
+		V_LV1 = 0
+		While V_LV1 < 32
+			TileMapGetAttribute	#LID_SKY V_LV0 V_LV1 [Tile] V_LV2
+			V_LV2 += #TIX_BACKGROUND_SKY
+			TileMapSetAttribute	#LID_SKY V_LV0 V_LV1 [Tile] V_LV2
+			V_LV1 += 1
+		End
+		V_LV0 += 1
+	End
+	
+;	TileMapFillRect #LID_SKY [Tile] 0 0 32 32 #TIX_BACKGROUND_SKY
+	
+	; setup simple horizon
+;	TileMapFillRect #LID_SKY [Tile] 0 3 32 1 #TIX_BACKGROUND_SKY+1
+;	TileMapFillRect #LID_SKY [Tile] 0 2 32 1 #TIX_BACKGROUND_SKY+2
+;	TileMapFillRect #LID_SKY [Tile] 0 1 32 1 #TIX_BACKGROUND_SKY+3
+;	TileMapFillRect #LID_SKY [Tile] 0 0 32 1 #TIX_BACKGROUND_SKY+4
+
+	; much slower!!
+;	TileMapSetMosaic #LID_BACKGROUND true
+	
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Background hblank handler - make the background 
+; 'wobble' - test code
+;
+
+Function Background_HBlank 1	; line
+
+	; update the copter searchlight effect (is this too much for the Hblank??)
+	Call Copter_HBlankCB V_EV0
+
+	V_LV0 = G_TICKS
+	V_LV0 >>= 2
+	V_EV0 >>= 1
+	V_EV0 += V_LV0
+	V_EV0 Bounce V_EV0 7
+	V_EV0 += G_BACKGROUND_OFFX
+	V_EV0 &= 511
+
+	TileMapSetOffsetX #LID_BACKGROUND V_EV0
+
+Return
+
+ExternFunction "copter.txt" Copter_HBlankCB
+

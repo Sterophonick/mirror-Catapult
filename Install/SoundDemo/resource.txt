@@ -1,0 +1,14 @@
+;;; Catapult resource script file - automatically generated
+;;; any changes made by hand will be lost
+
+
+#RID_SND_SINE
+.\sine.wav
+Sound effect
+None
+true
+#Decimal00
+0
+false
+false
+

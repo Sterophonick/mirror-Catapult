@@ -1,0 +1,147 @@
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;  setup a cow in the initial position
+; 
+
+Function Cow_Setup 1	; sprite num
+
+; set up the initial values for the cow
+	G_COW_X = 200
+	G_COW_Y = 122
+	G_COWDEAD = 0
+	G_COWJUMPTIMER = 0
+	G_COWJUMP = 0
+	G_COW_MEGA_LAUNCH = false
+
+; Macro - hit ^M to see macro editor
+	%SPRITESIZE_32 V_EV0
+
+	SpriteSetAttribute V_EV0 [ColourMode] 0
+	SpriteSetAttribute V_EV0 [PaletteIndex] 2
+	SpriteSetAttribute V_EV0 [sdFold] true
+	SpriteSetAttribute V_EV0 [rotScale] true
+	SpriteSetAttribute V_EV0 [rotationindex] 2
+	SpriteSetAttribute V_EV0 [RenderLayer] 1		; in front of front layer, behind title layer
+
+
+; set the cow's rotator to zero degrees and a 1:1 scale
+	RotateAndScale 2 0 256
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Handles user cow controls
+; 
+
+Function Cow_CheckController 0
+	; left
+	If F_IsButtonHeldPadLeft == 1
+		G_COW_X += -3
+		RotateSetValue 2 [xscale] -256
+	End
+	
+	; right
+	If F_IsButtonHeldPadRight == 1
+		G_COW_X += 3
+		RotateSetValue 2 [xscale] 256
+	End
+	
+	; jump
+	If F_IsButtonHeldPadUp == 1
+		If G_COWJUMP == 0
+			G_COWJUMP = 1
+			G_COWJUMPTIMER = 54
+			SoundPlay RID_SOUND_JUMP
+		End
+	End
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; animate and display the cow
+; 
+
+Function Cow_Update 0
+
+	If G_COWDEAD == 0
+		if G_COW_MEGA_LAUNCH == false
+			Call Cow_CheckController
+		Else
+			G_COW_SPIN += 8
+			G_COW_SPIN &= 255
+			RotateAndScale 2 G_COW_SPIN 256
+		End
+	End
+
+	If G_COW_X < 0
+		G_COW_X = 0
+	End
+
+	If G_COW_X > 200
+		G_COW_X = 200
+	End
+
+	If G_COWJUMPTIMER > 0
+		V_LV0 = G_COWJUMPTIMER
+		V_LV0 >>= 3
+		V_LV0 -= 3
+		G_COW_Y -= V_LV0
+		G_COWJUMPTIMER -= 1
+	Else
+		If  G_COW_MEGA_LAUNCH == true
+ 			G_COW_MEGA_LAUNCH = false
+			RotateAndScale 2 0 256
+		End
+		G_COWJUMP = 0
+	End
+
+	If G_COWDEAD == 0
+		If G_COWJUMP == 1
+			SpriteSetAttribute 0 [TileIndex] 32
+		Else
+			; calc anim index for cow
+			V_LV1 = G_COW_X
+			V_LV1 >>= 3
+			V_LV1 &= 1
+			V_LV1 <<= 4
+			V_LV1 += 48
+			SpriteSetAttribute 0 [TileIndex] V_LV1
+		End
+	else
+		SpriteSetAttribute 0 [TileIndex] 80
+	End
+
+	;   set the sprite position - note, if these values are negative, the cow will wrap around on a real GBA
+	;   and not disappear.
+	%SPRITE_SETPOS 0 G_COW_X-16 G_COW_Y-16
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;  check to see if the cow is over a jump pad
+; 
+
+Function Cow_CheckForJumpPad 0
+	If G_COW_Y > 119
+		If G_COW_X < 6
+			G_COWJUMP = 1
+			G_COWJUMPTIMER = 64
+ 			G_COW_MEGA_LAUNCH = true
+			SoundPlay RID_SOUND_MEGA_JUMP			
+		End
+		Return
+	End
+	If G_COW_Y > 64
+		If G_COW_X > 194
+			G_COWJUMP = 1
+			G_COWJUMPTIMER = 66
+ 			G_COW_MEGA_LAUNCH = true
+			G_COW_SPIN = 0
+			SoundPlay RID_SOUND_MEGA_JUMP			
+		End
+		Return
+	End
+	If G_COW_X < 36
+		MusicStop
+		MusicPlay RID_MOD_WIN
+		G_WON = 1
+		G_LEVEL += 1
+	End
+
+Return

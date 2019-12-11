@@ -1,0 +1,7 @@
+;;; Catapult script file - automatically generated
+;;; any changes made by hand will be lost
+
+
+#SID_TEST
+EN : "    FontDemo for Catapult v1.32b. This version of Catapult now has support for large fonts. This font was created by using the font processing tool that is built into Catapult. Catapult makes it easy to write GBA demos and games!    "
+

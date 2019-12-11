@@ -1,0 +1,153 @@
+; =======================================================
+; $Source: N:\\REPOS/Current/Data/Catapult/copter/Script/explosions.txt,v $
+; $Date: 2003/03/14 03:39:26 $
+; $Revision: 1.1 $
+; =======================================================
+;
+; 
+; Control and rendering of the explosions in the game
+;
+
+; at most - should match the max size of the explosion info array (or be less)
+##EXPLOSION_MAX	10
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Process all explosion events during a frame
+;
+
+Function Explosion_FrameTick 0
+
+	Array1DFind 0 0 EXPLODE_LIST.state != #EXPLOSION_STATE_IDLE V_LV0
+	While V_LV0 != -1
+		call TickExplosion V_LV0
+		Array1DFind V_LV0+1 0 EXPLODE_LIST.state != #EXPLOSION_STATE_IDLE V_LV0
+	End
+
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Start a new explosion. Pass the coords of the 
+; explosion. Assume 16x16 bang for now?
+; Use scaling (?)
+
+Function Explosion_Create 2			; x, y
+
+	; return zero ==> no slots available
+	CallRet IsExplosionAvailable
+	V_RV0 -= 1
+	
+	V_EV0 -= 8
+	V_EV1 -= 8
+	
+	; set state & position
+	Array1DSetElement EXPLODE_LIST.state V_RV0 #EXPLOSION_STATE_EXPLODING
+	Array1DSetElement EXPLODE_LIST.x V_RV0 V_EV0
+	Array1DSetElement EXPLODE_LIST.y V_RV0 V_EV1
+	Array1DSetElement EXPLODE_LIST.timer V_RV0 12		; number of frames to hang around
+	
+	; show explosion
+	Array1DGetElement EXPLODE_LIST.sprite V_RV0 V_LV2
+	%SpriteShow_Rot V_LV2
+	%SpriteMove V_LV2 V_EV0 V_EV1
+
+Return
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Initialise the explosion system
+; Happens once at game startup
+;
+
+Function Explosion_Initialise 0
+
+	; load explosion tiles into memory
+	TileDataLoad [sprite] RID_IMAGE_EXPLOSION #TIX_EXPLOSION_1 0
+
+	; load explosion palette into memory
+	PaletteLoad [SPRITE] RID_PAL_EXPLOSION #PIX_EXPLOSION
+	
+	; for all explosions
+	V_LV0 = 0
+	V_LV1 = #SIX_EXPLOSION_1
+	While V_LV0 < #EXPLOSION_MAX
+	
+		; initialise array info
+		Array1dSetElement EXPLODE_LIST.state V_LV0 #EXPLOSION_STATE_IDLE
+		Array1dSetElement EXPLODE_LIST.sprite V_LV0 V_LV1
+	
+		; init sprites
+		%SpriteHide V_LV1
+		%SPRITESIZE_16X16 V_LV1
+		SpriteSetAttribute V_LV1 [TileIndex] #TIX_EXPLOSION_1
+		SpriteSetAttribute V_LV1 [PaletteIndex] #PIX_EXPLOSION
+		SpriteSetAttribute V_LV1 [RotationIndex] V_LV0				; get one rotation bank each
+		SpriteSetAttribute V_LV1 [DisplayMode] 1
+	
+		; init rotate data (banks 0..9) used for explosions
+		RotateAndScale V_LV0 0 256
+	
+		V_LV0 += 1
+		V_LV1 += 1
+	End
+
+Return
+
+; === Local functions only ========================================================================
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Return index+1 if there are any explosion slots left to be filled
+; (i.e. another explosion can start)
+;
+
+Function IsExplosionAvailable 0
+
+	Array1DFind 0 0 EXPLODE_LIST.state == #EXPLOSION_STATE_IDLE V_LV0
+
+Return V_LV0+1
+
+; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; Process this active explosion every frame (not called
+; for idle bangs)
+;
+
+Function TickExplosion 1			; index of explosion to tick
+
+	; animate.. 
+	Array1DGetElement EXPLODE_LIST.sprite V_EV0 V_LV2
+	
+	; move with background
+	EXPLODE_LIST.x[V_EV0] -= 1
+	SpriteSetAttribute V_LV2 [Xpos] EXPLODE_LIST.x[V_EV0]
+
+	V_LV0 = G_TICKS
+	V_LV0 >>= 2
+	V_LV0 %= 3		; V_LV0 will be in the range 0..2
+	
+	If V_LV0 == 0
+		SpriteSetAttribute V_LV2 [TileIndex] #TIX_EXPLOSION_1
+	ElseIf V_LV0 == 1
+		SpriteSetAttribute V_LV2 [TileIndex] #TIX_EXPLOSION_2
+	Else	
+		SpriteSetAttribute V_LV2 [TileIndex] #TIX_EXPLOSION_3
+	End
+	
+	; scale (expand)
+	Array1DGetElement EXPLODE_LIST.timer V_EV0 V_LV0
+	V_LV1 = 10
+	V_LV1 -= V_LV0
+	V_LV0 = 256
+	V_LV0 -= V_LV1*13
+	RotateAndScale V_EV0 0 V_LV0
+	
+	; timeout? hide sprite, clear entry
+	EXPLODE_LIST.timer[V_EV0] -= 1
+	
+	if EXPLODE_LIST.timer[V_EV0] > 0
+		Return
+	End
+	
+	; dead - hide and clear for new bang
+	EXPLODE_LIST.state[V_EV0] = #EXPLOSION_STATE_IDLE
+	%SpriteHide V_LV2
+
+Return
+
